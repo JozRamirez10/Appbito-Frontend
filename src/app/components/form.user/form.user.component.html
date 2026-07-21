@@ -1,0 +1,138 @@
+<ion-content>
+  <div class="safe-area-top safe-area-bottom">
+
+    <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+      <ion-refresher-content></ion-refresher-content>
+    </ion-refresher>
+
+    <ion-card class="text-white">
+      <ion-card-header>
+        <ion-row>
+          
+          <ion-col class="ion-align-self-end text-white">
+            <h4 class="ion-margin-start">Register</h4>
+          </ion-col>
+  
+          <ion-col size="auto" class="ion-align-self-end">
+            <ion-button color="danger" class="ion-margin-end" [routerLink]="['/login']"> 
+                <ion-icon class="icon-white" slot="icon-only" name="close-sharp"></ion-icon>
+            </ion-button>
+          </ion-col>
+  
+        </ion-row>
+      </ion-card-header>
+      <ion-card-content>
+        <form (ngSubmit)="onSubmit(userForm)" #userForm="ngForm">
+  
+          <ion-input
+            label="Name"
+            label-placement="floating"
+            fill="outline"
+            type="text"
+            [(ngModel)]="user.name"
+            name="name"
+            #name="ngModel"
+            class="px-4"
+            [errorText]="errors.name? errors.name : 
+              'The name is required'"
+            required
+            >
+          </ion-input>
+  
+          <ion-input
+            label="Lastname"
+            label-placement="floating"
+            fill="outline"
+            type="text"
+            [(ngModel)]="user.lastname"
+            name="lastname"
+            #lastname="ngModel"
+            class="px-4 my-2"
+            [errorText]="errors.lastname? errors.lastname :
+              'The lastname is required'"
+            required
+            >
+          </ion-input>
+  
+          <ion-input
+            label="Date"
+            label-placement="floating"
+            fill="outline"
+            type="date"
+            [(ngModel)]="user.date"
+            name="date"
+            #date="ngModel"
+            class="px-4 my-2"
+            [errorText]="errors.date? errors.date :
+              'Date is required'"
+            required
+            >
+          </ion-input>
+  
+          <ion-input
+            label="Email"
+            label-placement="floating"
+            fill="outline"
+            type="email"
+            [(ngModel)]="user.email"
+            name="email"
+            #email="ngModel"
+            class="px-4 mt-2 mb-2"
+            [errorText]="errors.email? errors.email : 
+              email.errors?.['email'] ? 'It does not have an email format':
+              'Email is required'"
+            required
+            email
+            >
+          </ion-input>
+  
+          <ion-input
+            label="Password"
+            label-placement="floating"
+            fill="outline"
+            type="password"
+            [(ngModel)]="user.password"
+            name="password"
+            #password="ngModel"
+            class="px-4"
+            [errorText]="
+              errors.password ? errors.password :
+              password.errors?.['minlength'] ? 'The password must be 6 characters long' :
+              'Password is required'
+              "
+            required
+            minlength="6"
+            >
+          </ion-input>
+          @if(this.errorPassConfirm){
+            <ion-label color="danger" class="ms-6" style="font-size: 12px;">
+              Password doesn't match
+            </ion-label>
+          }
+  
+          @if(user.password && user.password.length >= 6){
+            <ion-input
+              label="Confirm password"
+              label-placement="floating"
+              fill="outline"
+              type="password"
+              [(ngModel)]="this.passwordConfirm"
+              name="passwordConfirm"
+              #passwordConfirm="ngModel"
+              class="px-4 mt-3 mb-2"
+              required
+              >
+            </ion-input>
+          }
+  
+          <ion-button expand="block" type="submit" color="warning" class="mx-4 my-4">
+            Save
+          </ion-button>
+  
+        </form>
+      </ion-card-content>
+  
+    </ion-card>
+  </div>
+
+</ion-content>

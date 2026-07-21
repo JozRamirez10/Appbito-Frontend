@@ -1,0 +1,16 @@
+
+<div class="monthlyProgress monthlyProgress-height" style="width: 100%;">
+    <div class="monthlyProgress-header">
+        <ion-button fill="clear" color="dark" (click)="prevYear()">
+          <ion-icon slot="icon-only" name="caret-back-outline"></ion-icon>
+        </ion-button>
+        
+        <ion-text>{{ currentDay.getFullYear() }}</ion-text>
+        
+        <ion-button fill="clear" color="dark" (click)="nextYear()">
+          <ion-icon slot="icon-only" name="caret-forward-outline"></ion-icon>
+        </ion-button>
+    </div>
+
+    <canvas #chartCanvas class="ion-margin-bottom">{{chart}}</canvas>
+</div>

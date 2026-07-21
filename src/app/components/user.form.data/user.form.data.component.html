@@ -1,0 +1,116 @@
+<form (ngSubmit)="onSubmit(userForm)" #userForm="ngForm" class="ion-margin">
+
+  <ion-list class="ion-padding-horizontal">
+    
+    <ion-row>
+      
+      <ion-col>
+        <ion-input
+          label="Name"
+          label-placement="floating"
+          fill="outline"
+          [(ngModel)]="user.name" name="name" #name="ngModel" required
+          [errorText]="errors.name? errors.name : 
+           'The name is required' "
+          [disabled]="!isEdit('name')"
+          class="text-white"
+        >
+        </ion-input>
+      </ion-col>
+
+      <ion-col size="auto">
+        <ion-button 
+          [color]="isEdit('name') ? 'warning' : 'primary'"
+          [attr.type]="!isEdit('name') ? 'submit' : 'button' "
+          (click)="btnEdit( (name.invalid || lastname.invalid) ? '' : 'name')"
+          >
+          @if(isEdit('name')){
+            <ion-icon slot="icon-only" name="save-outline"></ion-icon>
+          }@else{
+            <ion-icon slot="icon-only" name="brush-outline"></ion-icon>
+          }
+        </ion-button>
+      </ion-col>
+
+    </ion-row>
+
+    <ion-row>
+      
+      <ion-col>
+        <ion-input
+          label="Lastname"
+          label-placement="floating"
+          fill="outline"
+          [(ngModel)]="user.lastname" name="lastname" #lastname="ngModel" required
+          [errorText]="errors.lastname? errors.lastname : 
+           'The lastname is required' "
+          [disabled]="!isEdit('lastname')"
+          class="text-white"
+        >
+        </ion-input>
+      </ion-col>
+
+      <ion-col size="auto">
+        <ion-button 
+          [color]="isEdit('lastname') ? 'warning' : 'primary'"
+          [attr.type]="!isEdit('lastname') ? 'submit' : 'button' "
+          (click)="btnEdit( (name.invalid || lastname.invalid) ? '' : 'lastname')"
+          >
+          @if(isEdit('lastname')){
+            <ion-icon slot="icon-only" name="save-outline"></ion-icon>
+          }@else{
+            <ion-icon slot="icon-only" name="brush-outline"></ion-icon>
+          }
+        </ion-button>
+      </ion-col>
+
+    </ion-row>
+
+    <ion-row>
+      
+      <ion-col class="ion-align-self-center ion-text-start">
+        <div style="display: inline-block;">
+          <ion-datetime-button 
+            datetime="date"
+            [disabled]="!isEdit('date')"
+            >
+          </ion-datetime-button>
+        </div>
+      </ion-col>
+
+      <ion-col size="auto">
+        <ion-button 
+          [color]="isEdit('date') ? 'warning' : 'primary'"
+          [attr.type]="!isEdit('date') ? 'submit' : 'button' "
+          (click)="btnEdit( (name.invalid || lastname.invalid) ? '' : 'date')"
+          >
+          @if(isEdit('date')){
+            <ion-icon slot="icon-only" name="save-outline"></ion-icon>
+          }@else{
+            <ion-icon slot="icon-only" name="brush-outline"></ion-icon>
+          }
+        </ion-button>
+      </ion-col>
+
+    </ion-row>
+
+    <ion-modal [keepContentsMounted]="true">
+      <ng-template>
+        <ion-datetime 
+          id="date"
+          presentation="date"
+          [(ngModel)]="user.date" name="date" #date="ngModel"
+          >
+        </ion-datetime>
+      </ng-template>
+    </ion-modal>
+
+    <ion-row class="ion-margin-top ion-padding-top ion-justify-content-center">
+      <ion-button color="danger" (click)="handlerLogout()" >
+        <ion-text class="text-white">Logout</ion-text>
+      </ion-button>
+    </ion-row>
+
+  </ion-list>
+
+</form>

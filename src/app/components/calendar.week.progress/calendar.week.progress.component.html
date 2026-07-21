@@ -1,0 +1,56 @@
+<div class="calendar">
+  <div class="calendar-header">
+    <ion-button fill="clear" color="dark" (click)="prevWeek()">
+      <ion-icon slot="icon-only" name="caret-back-outline"></ion-icon>
+    </ion-button>
+
+    <ion-text>{{monthNames[currentDay.getMonth()]}} {{currentDay.getFullYear()}}</ion-text>
+
+    <ion-button fill="clear" color="dark" (click)="nextWeek()">
+      <ion-icon slot="icon-only" name="caret-forward-outline"></ion-icon>
+    </ion-button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped-columns text-center align-middle">
+      <thead>
+        <tr>
+          <th>Habit</th>
+          @for(day of weekDays; track $index){
+            <th>{{ day }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody class="days-habit">
+        @for(habit of habits; track habit.id){
+          <tr>
+            <td>{{ habit.name }}</td>
+            @for(day of daysInWeek; track $index){
+              @let done = getDone(day, habit.habitProgress);
+              @let note = hasNote(day, habit.habitProgress);
+              <td class="day" [class.selected]="isToday(day)"
+                (click)="loadHabitProgress(habit, day)">
+                <div [class.done]="done > 0">
+                  
+                  <div [ngClass]="{'d-flex justify-content-evenly align-items-center': done > 1 && note }">
+                    @if(done > 1){
+                      <div class="d-inline-block p-0 m-0 align-middle text-warning" [ngClass]="{'me-2' : note}">
+                        {{done}}
+                      </div>
+                    }
+                    @if(note){
+                      <div class="d-inline-block p-0 m-0 align-middle">
+                        <ion-icon name="reader-outline" color="warning" style="display: block;"></ion-icon>
+                      </div>
+                    }
+                  </div> 
+                </div>
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+</div>

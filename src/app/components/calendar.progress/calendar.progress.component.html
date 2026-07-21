@@ -1,0 +1,62 @@
+<div class="calendar">
+  <div class="calendar-header">
+    <ion-button fill="clear" color="dark" (click)="prevMonth()">
+      <ion-icon slot="icon-only" name="caret-back-outline"></ion-icon>
+    </ion-button>
+
+    <ion-text>{{monthNames[currentDate.getMonth()]}} {{currentDate.getFullYear()}}</ion-text>
+
+    <ion-button fill="clear" color="dark" (click)="nextMonth()">
+      <ion-icon slot="icon-only" name="caret-forward-outline"></ion-icon>
+    </ion-button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped-columns text-center align-middle">
+      <thead>
+        <tr>
+          @for(day of weekDays; track $index){
+            <th>{{ day }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody class="days">
+        @for(week of calendarWeeks; track $index){
+          <tr>
+            @for(day of week; track $index){
+              @let done = getDone(day, habitProgress);
+              @let note = hasNote(day, habitProgress);
+              @let verify = !edit ? note : true;
+              <td class="day" [class.selected]="isToday(day)"
+                (click)="(verify && day !== null) ? loadHabitProgress(habit, day) : null">
+                <div [class.done]="done > 0">
+                  {{ day ? day.getDate() : '' }} 
+                  <div [ngClass]="{'d-flex justify-content-evenly align-items-center': done > 1 && note }">
+                    @if(done > 1){
+                      <div class="d-inline-block p-0 m-0 align-middle text-warning" [ngClass]="{'me-2' : note}">
+                        {{done}}
+                      </div>
+                    }
+                    @if(note){
+                      <div class="d-inline-block p-0 m-0 align-middle">
+                        <ion-icon name="reader-outline" color="warning" style="display: block;"></ion-icon>
+                      </div>
+                    }
+                  </div> 
+                </div>
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<ion-modal #modal [isOpen]="isOpen" (didDismiss)="isOpen = false" [initialBreakpoint]="0.75"
+ [breakpoints]="[0, 0.75]">
+  <ng-template>
+    <app-detail-habit-progress [edit]="edit"/>
+  </ng-template>
+</ion-modal>

@@ -1,0 +1,228 @@
+<ion-content>
+  <div class="safe-area-top safe-area-bottom">
+    <ion-card>
+      <ion-card-header>
+        <ion-row>
+          
+          <ion-col class="ion-align-self-end text-white">
+            <h4 class="ion-margin-start">{{view == 'view' ? 'Detail habit' : view == 'edit' ? 'Edit habit' : 'Create habit'}}</h4>
+          </ion-col>
+          
+          <ion-col size="auto" class="ion-align-self-end">
+            <ion-button color="danger" class="ion-margin-end" [routerLink]="[(view == 'view' || view == 'create' ? '/dailyHabits' : '/listHabits')]"> 
+                <ion-icon class="icon-white" slot="icon-only" name="close-sharp"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <form (ngSubmit)="onSubmit(habitForm)" #habitForm="ngForm">
+          <ion-input
+            label="* Name"
+            label-placement="floating"
+            fill="outline"
+            type="text"
+            [(ngModel)]="habit.name"
+            name="name"
+            #name="ngModel"
+            class="px-4 py-2"
+            [errorText]="errors.name? errors.name : 
+              'The name is required'"
+            required
+            [disabled]="view == 'view'"
+            >
+          </ion-input>
+    
+          <ion-input
+            label="Description"
+            label-placement="floating"
+            fill="outline"
+            type="text"
+            [(ngModel)]="habit.description"
+            name="description"
+            #description="ngModel"
+            class="px-4 my-2"
+            [errorText]="errors.name? errors.name : 
+              'The name is required'"
+            required
+            [disabled]="view == 'view'"
+            >
+          </ion-input>
+    
+          @if(view == 'view' && !habit.hour){}
+          @else{
+            <ion-row class="px-4 my-3">
+              <ion-col class="ion-align-self-center">
+                <ion-label position="">Hour</ion-label>
+              </ion-col>
+              @if(view !== 'view'){
+                <ion-col class="ion-align-self-center">
+                  <ion-item lines="none">
+                    <ion-toggle
+                      slot="end"
+                      name="hourAllowed"
+                      [(ngModel)]="hourAllowed"
+                      (ionChange)="onHourAllowed($event)"
+                      [checked]="habit.hour ? true : false"
+                      >
+                    </ion-toggle>
+                  </ion-item>
+                </ion-col>
+              }
+              <ion-col class="ion-align-self-center ion-justify-self-center"
+                [class.display-none]="!hourAllowed ">
+                
+                <ion-datetime-button
+                  datetime="habitTime"
+                  [disabled]="view === 'view'"
+                  [class.disabled-normal]="view === 'view'"
+                  >
+                </ion-datetime-button>
+    
+                <ion-modal [keepContentsMounted]="true">
+                  <ng-template>
+                    <ion-datetime
+                      id="habitTime"
+                      presentation="time"
+                      display-format="HH:mm"
+                      [(ngModel)]="habit.hour"
+                      name="hour"
+                    ></ion-datetime>
+                  </ng-template>
+                </ion-modal>
+              </ion-col>
+            </ion-row>
+          }
+    
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>* Days</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <ion-row>
+    
+                <ion-col>
+    
+                  <ion-item lines="none">
+                    <ion-checkbox
+                      id="allDays" slot="start" value=""
+                      [checked]="habit.days ? habit.days.includes(daysOfWeek.MONDAY) &&
+                        habit.days.includes(daysOfWeek.TUESDAY) &&
+                        habit.days.includes(daysOfWeek.WEDNESDAY) &&
+                        habit.days.includes(daysOfWeek.THURSDAY) &&
+                        habit.days.includes(daysOfWeek.FRIDAY) &&
+                        habit.days.includes(daysOfWeek.SATURDAY) &&
+                        habit.days.includes(daysOfWeek.SUNDAY)
+                        : null"
+                      (ionChange)="toggleAllDays()"
+                      [disabled]="view == 'view'">
+                    </ion-checkbox>
+                    <ion-label>All Days</ion-label>
+                  </ion-item>
+    
+                  <ion-item lines="none">
+                    <ion-checkbox
+                      id="monday" slot="start" [value]="daysOfWeek.MONDAY"
+                      [checked]="habit.days ? habit.days.includes(daysOfWeek.MONDAY) : null"
+                      (ionChange)="toggleDay(daysOfWeek.MONDAY)"
+                      [disabled]="view == 'view'">
+                    </ion-checkbox>
+                    <ion-label>Monday</ion-label>
+                  </ion-item>
+    
+                  <ion-item lines="none">
+                    <ion-checkbox
+                      id="monday" slot="start" [value]="daysOfWeek.TUESDAY"
+                      [checked]="habit.days ? habit.days.includes(daysOfWeek.TUESDAY) : null"
+                      (ionChange)="toggleDay(daysOfWeek.TUESDAY)"
+                      [disabled]="view == 'view'">
+                    </ion-checkbox>
+                    <ion-label>Tuesday</ion-label>
+                  </ion-item>
+    
+                  <ion-item lines="none">
+                    <ion-checkbox
+                      id="monday" slot="start" [value]="daysOfWeek.WEDNESDAY"
+                      [checked]="habit.days ? habit.days.includes(daysOfWeek.WEDNESDAY) : null"
+                      (ionChange)="toggleDay(daysOfWeek.WEDNESDAY)"
+                      [disabled]="view == 'view'">
+                    </ion-checkbox>
+                    <ion-label>Wednesday</ion-label>
+                  </ion-item>
+    
+                </ion-col>
+    
+                <ion-col>
+    
+                  <ion-item lines="none">
+                    <ion-checkbox
+                      id="monday" slot="start" [value]="daysOfWeek.THURSDAY"
+                      [checked]="habit.days ? habit.days.includes(daysOfWeek.THURSDAY) : null"
+                      (ionChange)="toggleDay(daysOfWeek.THURSDAY)"
+                      [disabled]="view == 'view'">
+                    </ion-checkbox>
+                    <ion-label>Thursday</ion-label>
+                  </ion-item>
+    
+                  <ion-item lines="none">
+                    <ion-checkbox
+                      id="monday" slot="start" [value]="daysOfWeek.FRIDAY"
+                      [checked]="habit.days ? habit.days.includes(daysOfWeek.FRIDAY) : null"
+                      (ionChange)="toggleDay(daysOfWeek.FRIDAY)"
+                      [disabled]="view == 'view'">
+                    </ion-checkbox>
+                    <ion-label>Friday</ion-label>
+                  </ion-item>
+    
+                  <ion-item lines="none">
+                    <ion-checkbox
+                      id="monday" slot="start" [value]="daysOfWeek.SATURDAY"
+                      [checked]="habit.days ? habit.days.includes(daysOfWeek.SATURDAY) : null"
+                      (ionChange)="toggleDay(daysOfWeek.SATURDAY)"
+                      [disabled]="view == 'view'">
+                    </ion-checkbox>
+                    <ion-label>Saturday</ion-label>
+                  </ion-item>
+    
+                  <ion-item lines="none">
+                    <ion-checkbox
+                      id="monday" slot="start" [value]="daysOfWeek.SUNDAY"
+                      [checked]="habit.days ? habit.days.includes(daysOfWeek.SUNDAY) : null"
+                      (ionChange)="toggleDay(daysOfWeek.SUNDAY)"
+                      [disabled]="view == 'view'">
+                    </ion-checkbox>
+                    <ion-label>Sunday</ion-label>
+                  </ion-item>
+    
+                </ion-col>
+    
+              </ion-row>
+            </ion-card-content>
+          </ion-card>
+    
+          @if(habit.id > 0){
+            <ion-accordion-group value="expand">
+              <ion-accordion [value]="view == 'view' ? 'expand' : '' " style="background-color: transparent;">
+                <ion-item slot="header" lines="none" color="secondary" class="round mx-1">
+                  <ion-label>Progress</ion-label>
+                </ion-item>
+                <div slot="content" class="mx-1 mt-2" style="background-color: transparent;">
+                  <app-calendar-progress  [edit]="view == 'view' ? false : true"></app-calendar-progress>
+                </div>
+              </ion-accordion>
+            </ion-accordion-group>
+          }
+    
+          @if(view != 'view'){
+            <ion-button expand="block" type="submit" color="warning" class="mx-1 mt-4 mb-2">
+              Save
+            </ion-button>
+          }
+    
+        </form>
+      </ion-card-content>
+    
+    </ion-card>
+  </div>
+</ion-content>

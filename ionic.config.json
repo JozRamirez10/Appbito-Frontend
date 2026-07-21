@@ -1,0 +1,7 @@
+{
+  "name": "Appbito mobile",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}

@@ -1,0 +1,12 @@
+<ion-card>
+  <ion-card-content>
+    @if(counterStreak > 0){
+      <ion-card class="mb-3" color="success">
+        <ion-card-content class="ion-text-center" style="color:white;">
+          {{ counterStreak }} {{ (counterStreak) == 1 ? 'day' : 'days' }} strike! 
+        </ion-card-content>
+      </ion-card>
+    }
+    <app-calendar-progress [edit]="false" />
+  </ion-card-content>
+</ion-card>

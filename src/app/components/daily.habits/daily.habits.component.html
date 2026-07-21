@@ -1,0 +1,131 @@
+<ion-content>
+    <div class="safe-area-top safe-area-bottom">
+
+        <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+            <ion-refresher-content></ion-refresher-content>
+        </ion-refresher>
+
+        <ion-card>
+            <ion-card-header>
+                <ion-row class="ion-justify-content-between">
+                
+                    <ion-col class="ion-align-self-end">
+                        <h4 class="ion-margin-start text-white">Daily Habits</h4>
+                    </ion-col>
+        
+                    <ion-col size="auto" class="ion-align-self-center">
+                        <ion-button color="warning" class="ion-margin-end" [routerLink]="['/user']"> 
+                            <ion-icon class="icon-white" slot="icon-only" name="person-sharp"></ion-icon>
+                        </ion-button>
+                        
+                        <ion-button color="primary" class="ion-margin-end" [routerLink]="['/listHabits']">
+                            <ion-icon class="icon-white" slot="icon-only" name="list-sharp"></ion-icon>
+                        </ion-button>
+        
+                        <ion-button color="success" [routerLink]="['/habit', 'create']">
+                            <ion-icon class="icon-white" slot="icon-only" name="add-sharp"></ion-icon>
+                        </ion-button>
+                    </ion-col>
+        
+                </ion-row>
+            </ion-card-header>
+        
+            <ion-card-content>
+                <ion-grid>
+                    <ion-row class="ion-margin">
+                        <h4 class="fst-italic text-white">
+                            {{today | date:'fullDate'}}
+                        </h4>
+                    </ion-row>
+        
+                    @if(loading){
+                        <ion-row class="ion-justify-content-center ion-margin-bottom">
+                            <ion-spinner name="circles"></ion-spinner>
+                        </ion-row>
+                    } @else {
+                        @if(dailyHabits.length > 0){
+                            <ion-list class="mb-2">
+                                @for(dailyHabit of dailyHabits; track $index){
+                                    <ion-item lines="full">
+                                        <ion-checkbox slot="start" value="{{dailyHabit.id}}" id="check-{{dailyHabit.id}}"
+                                            (ionChange)="onDailyHabitDone($event, dailyHabit)"
+                                            [checked]="isChecked(dailyHabit)"
+                                            >
+                                        </ion-checkbox>
+                                        <ion-label>
+                                            {{dailyHabit.name}}
+                                            @if(hasNote(dailyHabit)){
+                                                <ion-icon name="reader-outline" color="warning"></ion-icon>
+                                            }
+                                        </ion-label>
+                                        
+                                        @for(habitStreak of habitStreaks; track $index){
+                                            @if(habitStreak.habit.id === dailyHabit.id){
+                                                <ion-badge class="badge-pill">{{habitStreak.streak}}</ion-badge>
+                                            }
+                                        }
+            
+                                        <ion-button color="secondary" class="ms-1" (click)="loadHabitProgress(dailyHabit, today)">
+                                            <ion-icon class="icon-white" slot="icon-only" name="newspaper-sharp"></ion-icon>
+                                        </ion-button>
+            
+                                        <ion-button color="medium" class="ms-1" [routerLink]="['/habit', dailyHabit.id, 'view']">
+                                            <ion-icon class="icon-white" slot="icon-only" name="ellipsis-horizontal-sharp"></ion-icon>
+                                        </ion-button>
+                                    </ion-item>
+                                }
+                            </ion-list>
+                        }@else{
+                            <ion-card color="warning">
+                                <ion-card-content>
+                                    There are not habits for today.
+                                </ion-card-content>
+                            </ion-card>
+                        }
+                    }
+                </ion-grid>
+            </ion-card-content>
+        </ion-card>
+        
+        @if(habits.length > 0){
+            <ion-card>
+                <ion-card-header>
+                    <ion-row class="ion-justify-content-between">
+                        <ion-col class="ion-align-self-end">
+                            <h4 class="ion-margin-start text-white">Weekly Progress</h4>
+                        </ion-col>        
+                    </ion-row>
+                </ion-card-header>
+            
+                <ion-card-content>
+                    <app-calendar-week-progress (isOpen)="loadHabitProgressCatch($event)"></app-calendar-week-progress>
+                </ion-card-content>
+            </ion-card>
+            
+            
+            <ion-card>
+                <ion-card-header>
+                    <ion-row>
+                        <ion-col>
+                            <h4 class="ion-margin-start text-white">Monthly Progress</h4>
+                        </ion-col>
+                    </ion-row>
+                </ion-card-header>
+            
+                <ion-card-content>
+                    <app-chart-month-progress />
+                </ion-card-content>
+            
+            </ion-card>
+            
+            
+        }
+    </div>
+</ion-content>
+
+<ion-modal #modal [isOpen]="isOpen" (didDismiss)="isOpen = false" [initialBreakpoint]="0.75"
+ [breakpoints]="[0, 0.75]">
+  <ng-template>
+    <app-detail-habit-progress [edit]="true"/>
+  </ng-template>
+</ion-modal>

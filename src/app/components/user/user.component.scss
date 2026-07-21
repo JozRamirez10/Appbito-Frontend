@@ -1,0 +1,40 @@
+.profile-container{
+    position: relative;
+    width: 150px;
+    height: 150px;
+    margin: 0 auto;
+}
+
+.profile-image {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: block;
+}
+
+.edit-image-btn{
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background-color: #007bff; /* Color del fondo del botón */
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.edit-image-btn:hover {
+    background-color: #0056b3;
+}
+
+.label-space{
+    white-space: normal !important;
+    text-align: center !important;
+}
+  

@@ -1,0 +1,42 @@
+<form (ngSubmit)="onSubmit(deleteForm)" #deleteForm="ngForm" class="ion-margin">
+
+  <ion-list class="ion-padding-horizontal">
+
+    <ion-row class="ion-margin-bottom">
+      <ion-input
+        type="password"
+        label="Current Password"
+        label-placement="floating"
+        fill="outline"
+        [(ngModel)]="this.password" name="password" #password="ngModel"
+        required
+        [errorText]="'Password is required'"
+        >
+      </ion-input>
+      @if(!matches){
+        <ion-text class="ion-margin-start" color="danger">Password doesn't match</ion-text>
+      }
+    </ion-row>
+
+    <ion-row class="ion-margin-bottom">
+      <ion-input
+        type="password"
+        label="Confirm Password"
+        label-placement="floating"
+        fill="outline"
+        [(ngModel)]="this.passwordConfirm" name="passwordConfirm" #passwordConfirm="ngModel"
+        required
+        errorText="Must not be empty"
+        >
+      </ion-input>
+    </ion-row>
+
+    <ion-row class="ion-justify-content-center">
+      <ion-button fill="outline" color="danger" type="submit">
+        Delete Account
+      </ion-button>
+    </ion-row>
+
+  </ion-list>
+
+</form>

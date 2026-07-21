@@ -1,0 +1,32 @@
+$spacer: 0.5rem;
+$spacer-range: 8;
+
+$directions: (
+  "": "",         // m-1 o p-1
+  "t": "top",     // mt-1
+  "b": "bottom",  // mb-1
+  "s": "left",    // ms-1
+  "e": "right",   // me-1
+  "x": ("left", "right"),  // mx-1
+  "y": ("top", "bottom")   // my-1
+);
+
+@each $type in ("m", "p") {
+  $property: if($type == "m", "margin", "padding");
+
+  @each $dir, $css-dir in $directions {
+    @for $i from 0 through $spacer-range {
+      .#{$type}#{$dir}-#{$i} {
+        @if type-of($css-dir) == "list" {
+          @each $d in $css-dir {
+            #{$property}-#{$d}: $spacer * $i !important;
+          }
+        } @else if $css-dir != "" {
+          #{$property}-#{$css-dir}: $spacer * $i !important;
+        } @else {
+          #{$property}: $spacer * $i !important;
+        }
+      }
+      }
+  }
+}

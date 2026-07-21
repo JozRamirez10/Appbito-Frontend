@@ -1,0 +1,161 @@
+/*
+ * App Global CSS
+ * ----------------------------------------------------------------------------
+ * Put style rules here that you want to apply globally. These styles are for
+ * the entire app and not just one component. Additionally, this file can be
+ * used as an entry point to import other CSS/Sass files to be included in the
+ * output CSS.
+ * For more information on global stylesheets, visit the documentation:
+ * https://ionicframework.com/docs/layout/global-stylesheets
+ */
+
+/* Core CSS required for Ionic components to work properly */
+@import "@ionic/angular/css/core.css";
+
+/* Basic CSS for apps built with Ionic */
+@import "@ionic/angular/css/normalize.css";
+@import "@ionic/angular/css/structure.css";
+@import "@ionic/angular/css/typography.css";
+@import "@ionic/angular/css/display.css";
+
+/* Optional CSS utils that can be commented out */
+@import "@ionic/angular/css/padding.css";
+@import "@ionic/angular/css/float-elements.css";
+@import "@ionic/angular/css/text-alignment.css";
+@import "@ionic/angular/css/text-transformation.css";
+@import "@ionic/angular/css/flex-utils.css";
+
+@import "bootstrap/scss/bootstrap";
+
+
+/**
+ * Ionic Dark Mode
+ * -----------------------------------------------------
+ * For more info, please see:
+ * https://ionicframework.com/docs/theming/dark-mode
+ */
+
+@import "@ionic/angular/css/palettes/dark.always.css"; 
+/* @import "@ionic/angular/css/palettes/dark.class.css"; */
+// @import '@ionic/angular/css/palettes/dark.system.css';
+
+@import './utils.scss';
+
+body {
+  background-color: var(--ion-background-color);
+  color: var(--ion-text-color);
+}
+
+/**
+    Styles
+**/
+
+.safe-area-top {
+  padding-top: var(--ion-safe-area-top) !important;
+}
+
+.safe-area-bottom {
+  padding-bottom: var(--ion-safe-area-bottom) !important;
+}
+
+.full-width-card{
+    width: 100%;
+    max-width: 100%;
+}
+
+.icon-white{
+    color: white;
+}
+
+.card-center{
+    margin: 0 auto;
+}
+
+.text-center{
+    text-align: center;
+}
+
+.card-content{
+    background-color: #131313;
+    padding: 1rem 0;
+    border-radius: 5px;
+}
+
+.text-white{
+    color: white !important;
+}
+
+.text-bold{
+    font-weight: bold;
+}
+
+.style-toast{
+    margin-top: 1rem;
+    text-align: center;
+    // color: white;
+}
+
+.alert-button-cancel {
+  color: #d33;
+}
+
+.alert-button-confirm {
+  color: #3085d6;
+}
+
+// Calendar 
+
+.calendar{
+    padding: 10px;
+    background-color: #2c2c34;
+    color: #ffff;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.table-responsive .table,
+.table-responsive .table th,
+.table-responsive .table td {
+    background-color: #2c2c34 !important;
+    color: white;
+}
+
+.table-responsive .table,
+.table-responsive .table th,
+.table-responsive .table td {
+  border-color: #32323a !important;
+} 
+
+.table-responsive .table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+.days div, .days-habit div {
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.table-responsive table.table tbody.days td.selected,
+.days td.selected, .days-habit  td.selected {
+    background-color: #8a4eff !important;
+    color: #fff;
+}
+
+.days div.done, .days-habit div.done{
+    background-color: #ff4e4e !important;
+    color: #fff;
+    /* height: 100%; */
+}
+
+.table-responsive table.table tbody.days td.day:hover,
+.days td.day:hover, .days-habit td.day:hover{
+    background-color: #4e4e5c !important;
+    cursor: pointer;
+}
