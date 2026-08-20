@@ -1,55 +1,48 @@
-import { Injectable } from '@angular/core';
-import { UpdatePasswordRequest, User } from '../models/user';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { environment } from 'src/environments/environment';
+import { API_ROUTES, GENERAL } from '../constants/constants';
+import { CreateUserRequest, DeleteUserRequest, UpdatePasswordRequest, UpdateUserRequest, User } from '../models/dtos/user.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
 
-  private url : string = environment.apiUrl + "/api/users";
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = `${environment.apiUrl}${API_ROUTES.USERS}`;
 
-  private users : User[] = [];
-
-  constructor(
-    private http : HttpClient
-  ) { }
-
-  findAllData() : User[]{
-    return this.users;
+  getMe() : Observable<User> {
+    return this.http.get<User>(`${this.apiUrl}${API_ROUTES.ME}`);
   }
 
-  findById(id : number) : Observable<User>{
-    return this.http.get<User>(`${this.url}/${id}`);
+  getMyImage() : Observable<Blob> {
+    return this.http.get(`${this.apiUrl}${API_ROUTES.ME_IMAGE}`, { responseType: GENERAL.BLOB });
   }
 
-  create(user : User) : Observable<User> {
-    return this.http.post<User>(this.url, user);
+  createUser(user : CreateUserRequest) : Observable<User> {
+    return this.http.post<User>(this.apiUrl, user);
   }
 
-  edit(user : User) : Observable<User>{
-    return this.http.put<User>(`${this.url}/${user.id}`, user);
+  uploadProfileImage(file : File) : Observable<User> {
+    const formData = new FormData();
+    formData.append(GENERAL.IMAGE, file);
+
+    return this.http.post<User>(`${this.apiUrl}${API_ROUTES.ME_IMAGE}`, formData);
   }
 
-  editPassword(request : UpdatePasswordRequest, id : number) : Observable<User>{
-    return this.http.put<User>(`${this.url}/password/${id}`, request);
+  updateMe(user : UpdateUserRequest) : Observable<User> {
+    return this.http.put<User>(`${this.apiUrl}${API_ROUTES.ME}`, user);
   }
 
-  remove(request : any, id : number) : Observable<any>{
-    return this.http.delete<number>(`${this.url}/password/${id}`, {
-      body: request,
-      headers: new HttpHeaders({ 'Content-Type': 'application/json' }) 
+  updatePassword(request : UpdatePasswordRequest) : Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}${API_ROUTES.ME_PASSWORD}`, request);
+  }
+
+  deleteWithPassword(request : DeleteUserRequest) : Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}${API_ROUTES.ME_PASSWORD}`, {
+      body: request
     });
   }
-
-  uploadProfileImage(formData : FormData) : Observable<any>{
-    return this.http.post(`${this.url}/image`, formData);
-  }
-
-  findImage(image : string){
-    return this.http.get(`${this.url}/image/${image}`, {responseType: 'blob'});
-  }
-
 }
