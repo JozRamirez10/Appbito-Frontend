@@ -1,86 +1,50 @@
 <ion-card>
   <ion-card-content>
     <ion-row class="text-white">
-      
+
       <ion-col class="ion-align-self-center">
         <ion-text class="text-bold">{{habit.name}}</ion-text>
       </ion-col>
-    
+
       <ion-col size="auto">
-        <ion-button color="warning" class="me-1" (click)="buttonViewProgress()"> 
-          @if(viewProgress){
-            <ion-icon class="icon-white" slot="icon-only" name="calendar-clear"></ion-icon>
-          }@else {
-            <ion-icon class="icon-white" slot="icon-only" name="calendar-clear-outline"></ion-icon>
-          }
+        <ion-button color="warning" class="me-1" (click)="buttonViewProgress()">
+            <ion-icon class="icon-white" slot="icon-only"
+            [name]="viewProgress ? 'calendar-clear' : 'calendar-clear-outline'"></ion-icon>
         </ion-button>
-    
-        <ion-button color="primary" class="me-1" [routerLink]="['/habit', habit.id, 'edit']"> 
+
+        <ion-button color="primary" class="me-1" [routerLink]="['/habit', habit.id, 'edit']">
           <ion-icon class="icon-white" slot="icon-only" name="create-sharp"></ion-icon>
         </ion-button>
-    
-        <ion-button color="danger" class="me-1" (click)="remove(habit.id)"> 
+
+        <ion-button color="danger" class="me-1" (click)="remove(habit.id)">
           <ion-icon class="icon-white" slot="icon-only" name="trash-sharp"></ion-icon>
         </ion-button>
       </ion-col>
-    
+
     </ion-row>
-    
+
     <ion-card class="card-in-card">
       <ion-card-content>
         <ion-row class="text-white">
-          @if(habit.description || habit.hour){
+          @if (habit.description || habit.hour) {
             <ion-col [ngClass]="!habit.hour ? 'ion-align-items-center' : '' ">
-              <ion-text>
-                {{habit.description}}
-              </ion-text>
-              @if(habit.hour){
+              <ion-text>{{habit.description}}</ion-text>
+              @if (habit.hour) {
                 <ion-list>
-                  <ion-item lines="none">
-                    {{habit.hour}}
-                  </ion-item>
+                  <ion-item lines="none">{{habit.hour}}</ion-item>
                 </ion-list>
               }
             </ion-col>
           }
           <ion-col [ngClass]="habit.description || habit.hour ? 'ion-text-center' : '' "
             class="ion-align-self-center">
-            @if(
-                habit.days.includes(daysOfWeek.MONDAY) &&
-                habit.days.includes(daysOfWeek.TUESDAY) &&
-                habit.days.includes(daysOfWeek.WEDNESDAY) &&
-                habit.days.includes(daysOfWeek.THURSDAY) &&
-                habit.days.includes(daysOfWeek.FRIDAY) &&                            
-                habit.days.includes(daysOfWeek.SATURDAY) &&                            
-                habit.days.includes(daysOfWeek.SUNDAY)
-            ){
-                <div>
-                  All Week
-                </div>
-            } @else if(
-                habit.days.includes(daysOfWeek.MONDAY) &&
-                habit.days.includes(daysOfWeek.TUESDAY) &&
-                habit.days.includes(daysOfWeek.WEDNESDAY) &&
-                habit.days.includes(daysOfWeek.THURSDAY) &&
-                habit.days.includes(daysOfWeek.FRIDAY)
-            ) {
-                <ion-label>
-                  Weekdays
-                </ion-label>
-            } @else if(
-                habit.days.includes(daysOfWeek.SATURDAY) &&                            
-                habit.days.includes(daysOfWeek.SUNDAY)
-            ) {
-                <ion-label>
-                  Weekend
-                </ion-label>
+            @if (formattedDays === 'All Week' || formattedDays === 'Weekdays' || formattedDays === 'Weekend') {
+              <ion-label>{{formattedDays}}</ion-label>
             } @else {
               <ul>
-              @for(day of habit.days; track $index){
-                <li>
-                  {{day}}
-                </li>
-              }
+                @for(day of formattedDays; track $index){
+                  <li>{{day}}</li>
+                }
               </ul>
             }
           </ion-col>
@@ -88,9 +52,14 @@
       </ion-card-content>
     </ion-card>
 
-    @if(habit.habitProgress.length > 0 && viewProgress){
-      <app-progress-habit [habitId]="habit.id" [habitProgress]="habit.habitProgress" [edit]="false"/>
-    } @else if(viewProgress){
+    @if (habit.progress.length > 0 && viewProgress) {
+      <app-progress-habit
+        [habitId]="habit.id"
+        [habitProgress]="habit.progress"
+        [edit]="false"
+        [streak]="habit.streak"
+      />
+    } @else if(viewProgress) {
       <ion-card class="mb-3" style="background-color: var(--ion-color-danger-shade);">
         <ion-card-content class="ion-text-center" style="color:white;">
           Not progress this month...
