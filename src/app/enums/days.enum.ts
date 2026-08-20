@@ -1,9 +1,9 @@
 export enum DaysOfWeek {
-    SUNDAY = 'Sunday',
-    MONDAY = 'Monday',
-    TUESDAY = 'Tuesday',
-    WEDNESDAY = 'Wednesday',
-    THURSDAY = 'Thursday',
-    FRIDAY = 'Friday',
-    SATURDAY = 'Saturday',
+    SUNDAY = 'SUNDAY',
+    MONDAY = 'MONDAY',
+    TUESDAY = 'TUESDAY',
+    WEDNESDAY = 'WEDNESDAY',
+    THURSDAY = 'THURSDAY',
+    FRIDAY = 'FRIDAY',
+    SATURDAY = 'SATURDAY',
 }
