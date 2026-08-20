@@ -1,95 +1,79 @@
-import { HttpInterceptorFn, HttpRequest } from "@angular/common/http";
-import { AuthService } from "../services/auth.service";
+import { HttpErrorResponse, HttpHandlerFn, HttpInterceptorFn, HttpRequest, HttpStatusCode } from "@angular/common/http";
 import { inject } from "@angular/core";
-import { catchError, from, mergeMap, tap, throwError } from "rxjs";
-// import { showModal } from "../utils/helpers";
-import { Store } from "@ngrx/store";
-import { logoutError } from "../store/auth/auth.action";
-import { ModalService } from "../services/modal.service";
+import { BehaviorSubject, catchError, filter, from, switchMap, take, throwError } from "rxjs";
+
+import { AuthService } from "../services/auth.service";
+
+import { AUTH, HTTP_HEADERS, PATHS } from '../constants/constants';
+
+let isRefreshing = false;
+let refreshTokenSubject = new BehaviorSubject<string | null>(null);
 
 export const tokenInterceptor : HttpInterceptorFn = (req, next) => {
+
     const authService = inject(AuthService);
-    const modalService = inject(ModalService);
-    const store = inject(Store)
-    // const token = authService.getToken() || sessionStorage.getItem("token");
-    const isRefreshRequest = req.url.includes("/auth/refresh");
+    const isRefreshRequest = req.url.includes(AUTH.REFRESH_TOKEN_PATH);
+    const isLoginRequest = req.url.includes(PATHS.LOGIN);
 
     return from(authService.getToken()).pipe(
-        mergeMap(token => {
-            if(!token || isRefreshRequest){
-                return next(req);
-            }
+        switchMap(token => {
 
-            // if(authService.isExpired()){
-            //     return from(authService.refreshToken()).pipe(
-            //         mergeMap(newToken => {
-            //             if(!newToken){
-            //                 store.dispatch(logoutError());
-            //                 modalError('JWT expired', modalService);
-            //                 return throwError(() => new Error("No token after refresh"));
-            //             }
-            //             authService.setToken(newToken);
-            //             return next(reqClone(req, newToken));
-            //         }),
-            //         catchError( error => {
-            //             store.dispatch(logoutError());
-            //             modalError(error.error?.error ?? 'Session error', modalService);
-            //             return throwError(() => error);
-            //         })
-            //     )
-            // }
+            const request = (token && !isRefreshRequest && !isLoginRequest)
+                ? addTokenHeader(req, token)
+                : req;
 
-            req = reqClone(req, token);
-            // req = req.clone({
-            //     url : req.url,
-            //     setHeaders: {
-            //         Authorization: `Bearer ${token}`
-            //     }
-            // });
-
-            return next(req).pipe(
-                catchError(error => {
-                    if(error.status !== 401) 
-                        return throwError( () => error);
-                    
-                    if(error.status === 500){
-                        return throwError( () => error.log(error))
+            return next(request).pipe(
+                catchError((error : HttpErrorResponse) => {
+                    if (error.status === HttpStatusCode.Unauthorized && !isRefreshRequest
+                        && !isLoginRequest) {
+                        return handleUnauthorized(error, req, next, authService);
                     }
-            
-                    return from(authService.refreshToken()).pipe(
-                        mergeMap(newToken => {
-                            if(!newToken) {
-                                store.dispatch(logoutError());
-                                modalError(error.error.error, modalService);
-                                return throwError( () => error);
-                            }
-            
-                            authService.setToken(newToken);
-                            return next(reqClone(req, newToken));
-            
-                        }),
-                        catchError( (error) => {
-                            store.dispatch(logoutError());
-                            modalError(error.error.error, modalService);
-                            return throwError( () => error);
-                        })
-                    )
+                    return throwError(() => error);
                 })
             )
         })
     )
 }
 
-export function reqClone(req : HttpRequest<any>, token : string) : HttpRequest<any> {
-    return req.clone({
-        setHeaders: {Authorization: `Bearer ${token}`}
-    });
+function handleUnauthorized(error : HttpErrorResponse, req : HttpRequest<unknown>,
+    next : HttpHandlerFn, authService : AuthService) {
+
+    if (!isRefreshing) {
+
+        isRefreshing = true;
+        refreshTokenSubject.next(null)
+
+        return from(authService.refreshToken()).pipe(
+            switchMap(newToken => {
+
+                isRefreshing = false;
+                if(!newToken) return throwError(() => error);
+
+                refreshTokenSubject.next(newToken);
+                return next(addTokenHeader(req, newToken));
+            }),
+            catchError((finalError : HttpErrorResponse) => {
+                if (finalError.status === HttpStatusCode.Unauthorized) {
+                    authService.forceLogout(finalError);
+                }
+                return throwError(() => error);
+            })
+        );
+    } else {
+        return refreshTokenSubject.pipe(
+            filter(token => token !== null),
+            take(1),
+            switchMap(token => {
+                return next(addTokenHeader(req, token!));
+            })
+        );
+    }
 }
 
-export function modalError(message : string, modalService : ModalService ){
-    if(message.includes("JWT expired")){
-        modalService.showModal('expired');
-    }else{
-        modalService.showModal('errorSession');
-    }
+function addTokenHeader(req : HttpRequest<unknown>, token : string) : HttpRequest<unknown> {
+    return req.clone({
+        setHeaders : {
+            [HTTP_HEADERS.AUTHORIZATION]: `${AUTH.BEARER_PREFIX}${token}`
+        }
+    });
 }
