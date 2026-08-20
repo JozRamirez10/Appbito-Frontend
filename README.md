@@ -6,6 +6,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![Capacitor](https://img.shields.io/badge/Capacitor-Ready-119EFF?style=for-the-badge&logo=capacitor&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
 The official frontend client for the Appbito platform. Built primarily as an interface to consume and showcase the capabilities of the [Appbito Spring Boot API](https://github.com/JozRamirez10/Appbito-Backend), this project delivers a hybrid mobile experience. It leverages modern Angular paradigms to ensure a highly reactive, scalable, and secure user experience.
 
@@ -115,6 +116,27 @@ npx cap sync android
 # Open Android Studio to build the APK / run the emulator
 npx cap open android
 ```
+---
+
+## 🐳 Docker Deployment
+
+This project includes a multi-stage optimized `Dockerfile` (Node.js for building and Nginx for serving) ready for ARM64 architectures and Zero Trust networks.
+
+### Build the image locally
+Make sure you are in the project's root directory and run:
+
+```bash
+docker build -t appbito-frontend:latest .
+```
+
+### Test the image locally
+You can spin up a test container exposing port 8080:
+
+```bash
+docker run -d -p 8080:80 --name frontend-test appbito-frontend:latest
+```
+
+The application will be available at `http://localhost:8080`.
 
 ---
 
