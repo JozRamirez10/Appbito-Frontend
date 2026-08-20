@@ -1,12 +1,18 @@
 <ion-card>
   <ion-card-content>
-    @if(counterStreak > 0){
+
+    @if (streak && streak > 0) {
       <ion-card class="mb-3" color="success">
         <ion-card-content class="ion-text-center" style="color:white;">
-          {{ counterStreak }} {{ (counterStreak) == 1 ? 'day' : 'days' }} strike! 
+          {{ streak }} {{ streak == 1 ? 'day' : 'days' }} streak!
         </ion-card-content>
       </ion-card>
     }
-    <app-calendar-progress [edit]="false" />
+
+    <app-calendar-progress
+     [edit]="edit"
+     [habitId]="habitId"
+    />
+
   </ion-card-content>
 </ion-card>

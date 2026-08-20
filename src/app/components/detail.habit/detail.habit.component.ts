@@ -1,23 +1,23 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Store } from '@ngrx/store';
-import { Subject } from 'rxjs';
-import { DaysOfWeek } from 'src/app/enums/days.enum';
-import { Habit } from 'src/app/models/habit';
-import { find, remove } from 'src/app/store/habit/habits.action';
-import { AlertController } from '@ionic/angular';
-import { ModalService } from 'src/app/services/modal.service';
+
+import { HabitView } from 'src/app/models/views/habit.view';
+import { HabitState } from 'src/app/states/habit.state';
 import { ProgressHabitComponent } from "../progress.habit/progress.habit.component";
-import { IonCard, IonCardContent, IonIcon, IonRow, IonCol, IonText, IonButton, IonList, IonItem, IonLabel } from "@ionic/angular/standalone";
+
+import { IonButton, IonCard, IonCardContent, IonCol, IonIcon, IonItem, IonLabel, IonList, IonRow, IonText } from "@ionic/angular/standalone";
 import { addIcons } from 'ionicons';
 import { calendarClear, calendarClearOutline, createSharp, trashSharp } from 'ionicons/icons';
+import { HABIT_FREQUENCIES } from 'src/app/constants/constants';
+import { DaysOfWeek } from 'src/app/enums/days.enum';
+import { ModalService } from 'src/app/services/modal.service';
 
 @Component({
   selector: 'app-detail-habit',
   standalone: true,
   imports: [
-    IonLabel, IonItem, IonList, IonButton, IonText, IonCol, IonRow, IonIcon, IonCardContent, IonCard, 
+    IonLabel, IonItem, IonList, IonButton, IonText, IonCol, IonRow, IonIcon, IonCardContent, IonCard,
     CommonModule,
     RouterLink,
     ProgressHabitComponent
@@ -27,67 +27,55 @@ import { calendarClear, calendarClearOutline, createSharp, trashSharp } from 'io
 })
 export class DetailHabitComponent {
 
-private destroy$ = new Subject<void>();
-  
-  public viewProgress ! : boolean;
+  private readonly habitState = inject(HabitState);
+  private readonly modalService = inject(ModalService);
 
-  daysOfWeek = DaysOfWeek;
+  public viewProgress : boolean = false;
 
-  @Input() habit ! : Habit;
+  @Input({required : true}) habit! : HabitView;
 
-  habitStore ! : Habit;
-
-  constructor(
-    private store : Store<{habits : any, loading : any}>,
-    private alertCtrl : AlertController,
-    private modalService : ModalService
-  ) {
+  constructor() {
     addIcons({
       calendarClear,
       calendarClearOutline,
       createSharp,
       trashSharp
-    }),
-    this.viewProgress = false;
-    this.store.select('habits').subscribe(state => {
-      this.habitStore = {... state.habit};
     });
   }
 
-  buttonViewProgress() : boolean{
+  buttonViewProgress() : void{
     this.viewProgress = !this.viewProgress;
-    if(this.viewProgress){
-      this.store.dispatch(find({id: this.habit.id}));
+  }
+
+  async remove(id : number) : Promise<void> {
+
+    if (!id) return;
+
+    const isConfirmed = await this.modalService.confirmDelete();
+
+    if (isConfirmed) {
+      this.habitState.deleteHabit(id);
     }
-    return this.viewProgress;
   }
 
-  async remove(id: number) : Promise<void> {
-    const alert = await this.alertCtrl.create({
-      header: "Are you sure?",
-      message: "You won't be able to revert this!",
-      buttons: [
-        {
-          text: 'Cancel',
-          role: 'cancel',
-          cssClass: 'alert-button-cancel'
-        },
-        {
-          text: 'Yes, delete it!',
-          role: 'confirm',
-          cssClass: 'alert-button-confirm',
-          handler: () => {
-            this.store.dispatch(remove({id}));
-            this.modalService.showModal("loading");
-          }
-        }
-      ]
-    });
-    await alert.present();
-  }
+  get formattedDays() : string | string[] {
 
-  ngOnDestroy() : void {
-    this.destroy$.next();
-    this.destroy$.complete();
+    if (!this.habit.days) return [];
+
+    const daysArray = Array.isArray(this.habit.days)
+      ? this.habit.days
+      : Array.from(this.habit.days) as string[];
+
+    const totalDays = daysArray.length;
+
+    if (totalDays === 7) return HABIT_FREQUENCIES.ALL_WEEK;
+
+    const hasSat = daysArray.includes(DaysOfWeek.SATURDAY);
+    const hasSun = daysArray.includes(DaysOfWeek.SUNDAY);
+
+    if (totalDays === 5 && !hasSat && !hasSun) return HABIT_FREQUENCIES.WEEKDAYS;
+    if (totalDays === 2 && hasSat && hasSun) return HABIT_FREQUENCIES.WEEKEND;
+
+    return daysArray;
   }
 }

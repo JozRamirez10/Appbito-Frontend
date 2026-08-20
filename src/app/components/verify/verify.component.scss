@@ -1,0 +1,13 @@
+.btn-block{
+    width: 25%;
+}
+
+@media(max-width: 1201px){
+    .margin-verify{
+        margin: 0 3rem;
+    }
+
+    .btn-block {
+        width: 75%;
+    }
+}

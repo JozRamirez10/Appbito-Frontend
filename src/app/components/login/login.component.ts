@@ -1,82 +1,76 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { Store } from '@ngrx/store';
-import { User } from 'src/app/models/user';
-import { login } from 'src/app/store/auth/auth.action';
-import { cleanUser } from 'src/app/store/user/user.action';
-import { ModalService } from 'src/app/services/modal.service';
-import { IonContent, IonCard, IonCardHeader, IonCardContent, IonButton, IonInput, IonRefresher, IonRefresherContent } from "@ionic/angular/standalone";
+import { Router, RouterLink } from '@angular/router';
+import { IonButton, IonCard, IonCardContent, IonCardHeader, IonContent, IonInput, IonRefresher, IonRefresherContent, IonText } from "@ionic/angular/standalone";
+import { AuthForm } from 'src/app/classes/auth.form';
+import { FORM_LOGIN_MESSAGES, GENERAL, VIEWS } from 'src/app/constants/constants';
+import { ModalActions } from 'src/app/enums/modal.actions.enum';
+import { LoginRequest } from 'src/app/models/dtos/auth.model';
+import { AuthService } from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [
-    IonRefresherContent, 
-    IonRefresher, 
+  imports: [IonText,
+    IonRefresherContent,
+    IonRefresher,
     CommonModule,
     FormsModule,
-    RouterLink,
     IonContent,
     IonCard,
     IonCardHeader,
     IonCardContent,
     IonInput,
-    IonButton
+    IonButton,
+    RouterLink
 ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
 })
-export class LoginComponent  implements OnInit {
+export class LoginComponent extends AuthForm {
 
-  user ! : User;
-  message ! : string;
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
-  constructor(
-    private store : Store<{auth : any, loading : any}>,
-    private modalService : ModalService
-  ) {
-    this.user = new User(); 
+  credentials : LoginRequest = {} as LoginRequest;
+  message : string = GENERAL.EMPTY_STRING;
+
+  override enterOnView() : void {
+    super.enterOnView();
+    this.authService.removeSession();
   }
 
-  async enterOnView(): Promise<void>{
-    this.user = new User(); 
-    this.store.dispatch(cleanUser());
-    this.modalService.dismissLoading();
-  }
-  
-  ngOnInit(): void {
-    this.enterOnView();
-  }
-
-  doRefresh(event : any){
-    this.enterOnView().then(() => event.target.complete());;
-  }
-
-  async ionViewWillEnter() {
-    this.user = new User(); 
-    this.store.dispatch(cleanUser());
-    this.modalService.dismissLoading();
+  override resetForm() : void {
+    super.resetForm();
+    this.credentials = {} as LoginRequest;
+    this.message = GENERAL.EMPTY_STRING;
   }
 
   onSubmit() : void {
-    if(!this.user.email || !this.user.password){
-      this.message = 'Email and password required';
-    }else{
-      this.store.dispatch(login({
-        email: this.user.email,
-        password: this.user.password
-      }));
-      this.message = '';
-
-      this.modalService.showModal('loading');
+    if (!this.credentials.email || !this.credentials.password) {
+      this.message = FORM_LOGIN_MESSAGES.REQUIRED_FIELDS;
+      return;
     }
-  }
 
-  ngOnDestroy() : void {
-    this.user = new User();
-  }
+    this.message = GENERAL.EMPTY_STRING;
+    this.modalService.showModal(ModalActions.LOADING);
 
+    this.authService.loginUser(this.credentials).subscribe({
+      next: () => {
+        this.modalService.dismissLoading();
+        this.router.navigate([`/${VIEWS.DAILY_HABITS}`]);
+      },
+      error: (err : HttpErrorResponse) => {
+        this.modalService.dismissLoading();
+        if (err.status === HttpStatusCode.BadRequest) {
+          this.handleFormError(err);
+        } else {
+          this.message = FORM_LOGIN_MESSAGES.INVALID_CREDENTIALS;
+        }
+      }
+    });
+  }
 }

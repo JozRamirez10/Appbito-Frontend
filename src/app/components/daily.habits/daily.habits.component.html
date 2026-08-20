@@ -8,74 +8,79 @@
         <ion-card>
             <ion-card-header>
                 <ion-row class="ion-justify-content-between">
-                
+
                     <ion-col class="ion-align-self-end">
                         <h4 class="ion-margin-start text-white">Daily Habits</h4>
                     </ion-col>
-        
+
                     <ion-col size="auto" class="ion-align-self-center">
-                        <ion-button color="warning" class="ion-margin-end" [routerLink]="['/user']"> 
+                        <ion-button color="warning" class="ion-margin-end" [routerLink]="['/user']">
                             <ion-icon class="icon-white" slot="icon-only" name="person-sharp"></ion-icon>
                         </ion-button>
-                        
+
                         <ion-button color="primary" class="ion-margin-end" [routerLink]="['/listHabits']">
                             <ion-icon class="icon-white" slot="icon-only" name="list-sharp"></ion-icon>
                         </ion-button>
-        
+
                         <ion-button color="success" [routerLink]="['/habit', 'create']">
                             <ion-icon class="icon-white" slot="icon-only" name="add-sharp"></ion-icon>
                         </ion-button>
                     </ion-col>
-        
+
                 </ion-row>
             </ion-card-header>
-        
+
             <ion-card-content>
                 <ion-grid>
                     <ion-row class="ion-margin">
                         <h4 class="fst-italic text-white">
-                            {{today | date:'fullDate'}}
+                            {{todayDate() | date:'fullDate'}}
                         </h4>
                     </ion-row>
-        
-                    @if(loading){
+
+                    @if (habitState.isLoading()) {
                         <ion-row class="ion-justify-content-center ion-margin-bottom">
                             <ion-spinner name="circles"></ion-spinner>
                         </ion-row>
                     } @else {
-                        @if(dailyHabits.length > 0){
+                        @if(dailyHabits().length > 0){
                             <ion-list class="mb-2">
-                                @for(dailyHabit of dailyHabits; track $index){
+                                @for (dailyHabit of dailyHabits(); track dailyHabit.id) {
+
+                                    @let checked = isChecked(dailyHabit);
+                                    @let note = hasNote(dailyHabit);
+
                                     <ion-item lines="full">
-                                        <ion-checkbox slot="start" value="{{dailyHabit.id}}" id="check-{{dailyHabit.id}}"
+                                        <ion-checkbox slot="start" [value]="dailyHabit.id" [id]="'check-' + dailyHabit.id"
                                             (ionChange)="onDailyHabitDone($event, dailyHabit)"
-                                            [checked]="isChecked(dailyHabit)"
+                                            [checked]="checked"
                                             >
                                         </ion-checkbox>
                                         <ion-label>
                                             {{dailyHabit.name}}
-                                            @if(hasNote(dailyHabit)){
+                                            @if (note) {
                                                 <ion-icon name="reader-outline" color="warning"></ion-icon>
                                             }
                                         </ion-label>
-                                        
-                                        @for(habitStreak of habitStreaks; track $index){
-                                            @if(habitStreak.habit.id === dailyHabit.id){
-                                                <ion-badge class="badge-pill">{{habitStreak.streak}}</ion-badge>
-                                            }
+
+                                        @if (dailyHabit.streak !== undefined && dailyHabit.streak !== null) {
+                                            <ion-badge class="badge-pill">{{dailyHabit.streak}}</ion-badge>
                                         }
-            
-                                        <ion-button color="secondary" class="ms-1" (click)="loadHabitProgress(dailyHabit, today)">
+
+                                        <ion-button slot="end" color="secondary" class="ms-1"
+                                            (click)="openDetailModal(dailyHabit)"
+                                            (keyup.enter)="openDetailModal(dailyHabit)"
+                                            tabindex="0">
                                             <ion-icon class="icon-white" slot="icon-only" name="newspaper-sharp"></ion-icon>
                                         </ion-button>
-            
-                                        <ion-button color="medium" class="ms-1" [routerLink]="['/habit', dailyHabit.id, 'view']">
+
+                                        <ion-button slot="end" color="medium" class="ms-1" [routerLink]="['/habit', dailyHabit.id, 'view']">
                                             <ion-icon class="icon-white" slot="icon-only" name="ellipsis-horizontal-sharp"></ion-icon>
                                         </ion-button>
                                     </ion-item>
                                 }
                             </ion-list>
-                        }@else{
+                        } @else {
                             <ion-card color="warning">
                                 <ion-card-content>
                                     There are not habits for today.
@@ -86,23 +91,24 @@
                 </ion-grid>
             </ion-card-content>
         </ion-card>
-        
-        @if(habits.length > 0){
+
+        @if (habits().length > 0) {
             <ion-card>
                 <ion-card-header>
                     <ion-row class="ion-justify-content-between">
                         <ion-col class="ion-align-self-end">
                             <h4 class="ion-margin-start text-white">Weekly Progress</h4>
-                        </ion-col>        
+                        </ion-col>
                     </ion-row>
                 </ion-card-header>
-            
+
                 <ion-card-content>
-                    <app-calendar-week-progress (isOpen)="loadHabitProgressCatch($event)"></app-calendar-week-progress>
+                    <app-calendar-week-progress
+                    (openDetail)="handleOpenDetailFromCalendar($event)"
+                    />
                 </ion-card-content>
             </ion-card>
-            
-            
+
             <ion-card>
                 <ion-card-header>
                     <ion-row>
@@ -111,21 +117,26 @@
                         </ion-col>
                     </ion-row>
                 </ion-card-header>
-            
+
                 <ion-card-content>
-                    <app-chart-month-progress />
+                    <app-chart-month-progress/>
                 </ion-card-content>
-            
+
             </ion-card>
-            
-            
         }
     </div>
 </ion-content>
 
-<ion-modal #modal [isOpen]="isOpen" (didDismiss)="isOpen = false" [initialBreakpoint]="0.75"
+<ion-modal #modal [isOpen]="isOpen()" (didDismiss)="isOpen.set(false)" [initialBreakpoint]="0.75"
  [breakpoints]="[0, 0.75]">
   <ng-template>
-    <app-detail-habit-progress [edit]="true"/>
+    @if (selectedHabit()) {
+        <app-detail-habit-progress
+            [edit]="true"
+            [habitId]="selectedHabit()!.id"
+            [day]="selectedDate()"
+            [monthProgress]="selectedHabit()!.progress"
+        />
+    }
   </ng-template>
 </ion-modal>

@@ -1,110 +1,96 @@
-import { Component, OnInit } from '@angular/core';
-import { FormsModule, NgForm } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
-import { Store } from '@ngrx/store';
-import { User } from 'src/app/models/user';
-import { ModalService } from 'src/app/services/modal.service';
-import { loadingState } from 'src/app/store/loading/loading.action';
-import { add, cleanUser } from 'src/app/store/user/user.action';
-import { IonContent, IonCard, IonCardHeader, IonCardContent, IonButton, IonInput, IonRow, IonCol, IonRefresher, IonRefresherContent } from "@ionic/angular/standalone";
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCol, IonContent, IonIcon, IonInput, IonRefresher, IonRefresherContent, IonRow, IonText } from "@ionic/angular/standalone";
 import { addIcons } from 'ionicons';
 import { closeSharp } from 'ionicons/icons';
+import { finalize } from 'rxjs';
+import { AuthForm } from 'src/app/classes/auth.form';
+import { PATHS } from 'src/app/constants/constants';
+import { ModalActions } from 'src/app/enums/modal.actions.enum';
+import { CreateUserRequest } from 'src/app/models/dtos/user.model';
+import { UserService } from 'src/app/services/user.service';
+
+interface CreateForm extends CreateUserRequest {
+  confirmPassword : string;
+}
 
 @Component({
   selector: 'app-form-user',
   standalone: true,
-  imports: [
+  imports: [IonText, IonIcon,
     FormsModule,
     RouterLink,
     IonContent,
     IonCard,
     IonCardHeader,
-    IonicModule,
     IonCardContent,
     IonButton,
     IonInput,
     IonRow,
     IonCol,
-    IonRefresher, 
+    IonRefresher,
     IonRefresherContent
 ],
   templateUrl: './form.user.component.html',
-  styleUrl: './form.user.component.scss'
+  styleUrls: ['./form.user.component.scss']
 })
-export class FormUserComponent implements OnInit{
-  
-  loading ! : boolean ;
-  view : boolean = false;
+export class FormUserComponent extends AuthForm {
 
-  user ! : User;
-  errors : any = {};
-  passwordConfirm  ! : string;
-  errorPassConfirm : boolean = false;
+  private readonly userService = inject(UserService);
+  private readonly router = inject(Router);
 
-  constructor(
-    private store : Store<{users : any, loading : any}>,
-    private modalService : ModalService,
-  ) {
-    addIcons({closeSharp});
-    
-    this.store.select('users').subscribe(state => {
-      this.user = {... state.user};
-      this.errors = state.errors;
-    });
-    this.store.select('loading').subscribe(loading => {
-      this.loading = loading;
-      if(this.view){
-        if(loading){
-          this.modalService.showModal('creatingUser');
-        }else{
-          this.modalService.dismissLoading();
-        }
-      }
-    })
+  userData = signal<CreateForm>({} as CreateForm);
+  passwordsMatch = signal<boolean>(true);
+
+  constructor() {
+    super();
+    addIcons({ closeSharp });
   }
 
-  async enterOnView() : Promise<void> {
-    this.user = new User();
-    this.store.dispatch(cleanUser());
-    this.passwordConfirm = '';
-    this.modalService.dismissLoading();
+  override resetForm() : void {
+    super.resetForm();
+    this.userData.set({} as CreateForm);
+    this.passwordsMatch.set(true);
   }
 
-  doRefresh(event : any){
-    this.enterOnView().then(() => event.target.complete());;
-  }
-  
-  ngOnInit(): void {
-    this.enterOnView();
-  }
+  onSubmit() : void {
+    this.clearErrors();
+    this.passwordsMatch.set(true);
 
-  async ionViewWillEnter() : Promise<void> {
-    this.enterOnView();
-    this.view = true;
-  }
-
-  ionViewWillLeave() : void {
-    this.view = false;
-  }
-
-  onSubmit(userForm : NgForm) : void {
-    
-    Object.values(userForm.controls).forEach(control => {
-      control.markAsTouched();
-    });
-    
-    if(userForm.valid){
-      if(this.passwordConfirm == this.user.password){
-        this.store.dispatch(loadingState({loading: true}))
-        this.store.dispatch(add({user : this.user}));
-      }else{
-        this.errorPassConfirm = true;
-      }
+    if (this.authForm) {
+      this.authForm.control.markAllAsTouched();
     }
+
+    if (this.authForm?.invalid) {
+      return;
+    }
+
+    const data = this.userData();
+
+    if (!data.password || !data.confirmPassword) {
+      return;
+    }
+
+    if (data.password !== data.confirmPassword) {
+      this.passwordsMatch.set(false);
+      return;
+    }
+
+    this.modalService.showModal(ModalActions.CREATING_USER);
+
+    this.userService.createUser(data).pipe(
+      finalize(() => this.modalService.dismissLoading())
+    ).subscribe({
+      next: async () => {
+        await this.modalService.showModal(ModalActions.USER_CREATED);
+        this.router.navigateByUrl(PATHS.LOGIN, { replaceUrl: true });
+      },
+      error: (err : HttpErrorResponse) => {
+        this.handleFormError(err);
+      }
+    });
   }
 
-  ngOnDestroy() : void {
-    this.user = new User();
-  }
 }

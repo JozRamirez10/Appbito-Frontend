@@ -1,15 +1,16 @@
-import { Component, Input, OnInit } from '@angular/core';
-import { Store } from '@ngrx/store';
-import { Observable, Subject, takeUntil } from 'rxjs';
-import { Habit, HabitProgress } from 'src/app/models/habit';
-import { selectHabitsWithProgress } from 'src/app/selectors/habit.selector';
-import { findByIdHabitAndRange, findHabitProgress } from 'src/app/store/habitProgress/habit.progress.action';
-import { dayWihtoutTime, getDone, getMonthlyRanges, getTwoMonthlyRangesForToday, hasNote, isToday, monthNames, weekDays } from 'src/app/utils/helpers';
 import { CommonModule } from '@angular/common';
+import { Component, computed, inject, Input, OnInit, signal } from '@angular/core';
+
+import { getDone, getMonthlyRanges, getTwoMonthlyRangesForDate, hasNote, isToday } from 'src/app/utils/helpers';
 import { DetailHabitProgressComponent } from "../detail.habit.progress/detail.habit.progress.component";
-import { IonButton, IonIcon, IonText, IonModal } from "@ionic/angular/standalone";
+
+import { IonButton, IonIcon, IonModal, IonText } from "@ionic/angular/standalone";
 import { addIcons } from 'ionicons';
-import { caretBackOutline, caretForwardOutline, readerOutline } from 'ionicons/icons';
+import { caretBackOutline, caretForwardOutline, cloudOfflineOutline, readerOutline } from 'ionicons/icons';
+import { CALENDAR } from 'src/app/constants/constants';
+import { MonthStatus } from 'src/app/enums/month.status.enum';
+import { ModalService } from 'src/app/services/modal.service';
+import { HabitState } from 'src/app/states/habit.state';
 
 @Component({
   selector: 'app-calendar-progress',
@@ -17,137 +18,126 @@ import { caretBackOutline, caretForwardOutline, readerOutline } from 'ionicons/i
   styleUrls: ['./calendar.progress.component.scss'],
   standalone: true,
   imports: [
-    IonButton, IonModal, IonText, IonIcon, IonButton, 
+    IonButton, IonModal, IonText, IonIcon,
     CommonModule,
     DetailHabitProgressComponent
 ],
 })
-export class CalendarProgressComponent  implements OnInit {
+export class CalendarProgressComponent implements OnInit {
 
-  habitProgress ! : HabitProgress[];
-  destroy$ = new Subject<void>();
+  @Input() edit : boolean = false;
+  @Input({required: true}) habitId! : number;
 
-  currentDate: Date = new Date();
-  daysInMonth: Date[] = [];
-  calendarWeeks: Date[][] = [];
+  private readonly habitState = inject(HabitState);
+  private readonly modalService = inject(ModalService);
 
-  weekDays : string[] = weekDays;
-  monthNames : string [] = monthNames;
-  
-  @Input() edit : boolean  = false;
-  
-  habit ! : Habit ; 
-  habits ! : Habit[];
-  habits$ ! : Observable<Habit[]>;
+  currentDate = signal<Date>(new Date());
+  calendarWeeks = signal<Date[][]>([]);
 
-  isOpen : boolean = false;
-  
-  constructor(
-    private store : Store<{habits: any}>
-  ) {
+  isOpen = signal<boolean>(false);
+  selectedDay = signal<Date | null>(null);
+
+  readonly weekDays : string[] = CALENDAR.WEEKDAYS;
+  readonly monthNames : string [] = CALENDAR.MONTH_NAMES;
+
+  habitProgress = computed(() => {
+    const habit = this.habitState.habits().find(h => h.id === this.habitId);
+    return habit?.progress || [];
+  });
+
+  currentMonthStatus = computed(() => {
+    const date = this.currentDate();
+    const status = this.habitState.getMonthStatus({
+      habitId: this.habitId,
+      year: date.getFullYear(),
+      month: date.getMonth()
+    });
+    return status ?? MonthStatus.SUCCESS;
+  });
+
+  constructor() {
     addIcons({
       caretBackOutline,
       caretForwardOutline,
-      readerOutline
+      readerOutline,
+      cloudOfflineOutline
     });
-    this.store.select('habits').subscribe(state => {
-      this.habit = state.habit;
-      this.habits = state.habits;
-    });
-
-    this.habits$ = this.store.select(selectHabitsWithProgress);
   }
 
   ngOnInit() {
-    this.generateCalendar();
-    this.habits$.pipe(takeUntil(this.destroy$)).subscribe(habits => {
-      this.habitProgress = habits.flatMap(habit => habit.id == this.habit.id ? habit.habitProgress : []);
-    });
-
-    const ranges = getTwoMonthlyRangesForToday();
-
-    this.store.dispatch(findByIdHabitAndRange({
-      habits: [this.habit],
-      startDate: ranges.start,
-      endDate: ranges.end
-    }));
+    this.generateCalendar(this.currentDate());
+    const ranges = getTwoMonthlyRangesForDate(this.currentDate());
+    this.fetchData(ranges.start, ranges.end);
   }
 
-  generateCalendar() {
-    const year = this.currentDate.getFullYear();
-    const month = this.currentDate.getMonth();
+  generateCalendar(date : Date) {
+    const year = date.getFullYear();
+    const month = date.getMonth();
     const firstDayOfMonth = new Date(year, month, 1).getDay();
     const totalDays = new Date(year, month + 1, 0).getDate();
 
-    // Ajustar el inicio de la semana (lunes a domingo)
     const offset = (firstDayOfMonth + 6) % 7;
 
-    this.daysInMonth = Array(offset).fill(null).concat(
+    const daysInMonth = new Array(offset).fill(null).concat(
       Array.from({ length: totalDays }, (_, i) => new Date(year, month, i + 1))
-    );
+    )
 
-    this.calendarWeeks = [];
-    for(let i = 0; i < this.daysInMonth.length; i += 7){
-      this.calendarWeeks.push(this.daysInMonth.slice(i, i + 7));
-    }    
+    const weeks: Date[][] = [];
+    for (let i = 0; i < daysInMonth.length; i += 7) {
+      weeks.push(daysInMonth.slice(i, i + 7));
+    }
+    this.calendarWeeks.set(weeks);
   }
 
-  prevMonth() {
-    this.currentDate.setMonth(this.currentDate.getMonth() - 1);
-    this.generateCalendar();
-    this.findPrevMonth(this.currentDate);
+  changeMonth(offset : number) {
+    const current = this.currentDate();
+    const newDate = this.generateDateWithOffset(current, offset);
+
+    this.currentDate.set(newDate);
+    this.generateCalendar(newDate);
+
+    const ranges = getMonthlyRanges(newDate);
+    this.fetchData(ranges.start, ranges.end);
   }
 
-  findPrevMonth(day : Date) {
-    const lastDayMonth = new Date(day.getFullYear(), day.getMonth() - 1, day.getDate());
-    const monthRanges = getMonthlyRanges(lastDayMonth);
-
-    this.store.dispatch(findByIdHabitAndRange({
-      habits: this.habits,
-      startDate: monthRanges.start,
-      endDate: monthRanges.end
-    }));
+  generateDateWithOffset(date : Date, offset : number) : Date {
+    return new Date(date.getFullYear(), date.getMonth() + offset, 1);
   }
 
-  nextMonth() {
-    this.currentDate.setMonth(this.currentDate.getMonth() + 1);
-    this.generateCalendar();
-    this.findNextMonth(this.currentDate);
-  }
-
-  findNextMonth(day : Date) {
-    const nextDayMonth = new Date(day.getFullYear(), day.getMonth() + 1, day.getDate());
-    const monthRanges = getMonthlyRanges(nextDayMonth);
-
-    this.store.dispatch(findByIdHabitAndRange({
-      habits: this.habits,
-      startDate: monthRanges.start,
-      endDate: monthRanges.end
-    }));
+  fetchData(startDate : string, endDate : string) {
+    this.habitState.loadProgress(this.habitId, startDate, endDate);
   }
 
   isToday(day : Date) : boolean {
     return isToday(day);
   }
 
-  getDone(day : Date, habitProgress : HabitProgress[]) : number {
-    if(day != null){
-      return getDone(dayWihtoutTime(day), habitProgress);
+  getDoneCount(day : Date) : number {
+    if (day != null) {
+      return getDone(day, this.habitProgress());
     }
     return 0;
   }
 
-  hasNote(day : Date, habitProgress : HabitProgress[]) : boolean {
-    if(day != null){
-      return hasNote(day, habitProgress);
-    }
-    return false;
+  hasNoteData(day : Date) : boolean {
+    if (!day) return false;
+    return hasNote(day, this.habitProgress());
   }
 
-  loadHabitProgress(habit: Habit, day : Date) {
-    if(day != null){
-      this.store.dispatch(findHabitProgress({habit, day}));
-      this.isOpen = true;
+  loadHabitProgress(day : Date) {
+    if (day) {
+      this.selectedDay.set(day);
+      this.isOpen.set(true);
     }
   }
+
+  retryCurrentMonth() {
+    const ranges = getMonthlyRanges(this.currentDate());
+    this.fetchData(ranges.start, ranges.end);
+  }
+
+  handleModalDismiss(event: any) {
+    this.isOpen.set(false);
+  }
+
 }

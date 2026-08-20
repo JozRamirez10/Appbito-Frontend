@@ -8,29 +8,31 @@
     <ion-card>
       <ion-card-header>
         <ion-row class="ion-align-items-center ion-justify-content-center">
-          
+
           <ion-col size="auto">
-            <ion-button color="danger" [routerLink]="['/dailyHabits']"> 
+            <ion-button color="danger" [routerLink]="['/dailyHabits']">
                 <ion-icon class="icon-white" slot="icon-only" name="close-sharp"></ion-icon>
             </ion-button>
           </ion-col>
-    
+
           <ion-col>
             <h4 class="ion-text-center text-white">List of Habits</h4>
           </ion-col>
-    
+
           <ion-col size="auto">
-            <ion-button color="success" [routerLink]="['/habit']"> 
+            <ion-button color="success" [routerLink]="['/habit']">
                 <ion-icon class="icon-white" slot="icon-only" name="add-sharp"></ion-icon>
             </ion-button>
           </ion-col>
-    
+
         </ion-row>
+
       </ion-card-header>
+
       <ion-card-content>
-        @if(habits.length > 0){
+        @if (habits().length > 0) {
           <ion-list>
-            @for(habit of habits; track $index){
+            @for (habit of habits(); track habit.id) {
               <app-detail-habit [habit]="habit" />
             }
           </ion-list>
@@ -42,6 +44,7 @@
           </ion-card>
         }
       </ion-card-content>
+
     </ion-card>
   </div>
 </ion-content>

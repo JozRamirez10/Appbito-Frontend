@@ -8,95 +8,114 @@
     <ion-card class="text-white">
       <ion-card-header>
         <ion-row>
-          
+
           <ion-col class="ion-align-self-end text-white">
             <h4 class="ion-margin-start">Register</h4>
           </ion-col>
-  
+
           <ion-col size="auto" class="ion-align-self-end">
-            <ion-button color="danger" class="ion-margin-end" [routerLink]="['/login']"> 
+            <ion-button color="danger" class="ion-margin-end" [routerLink]="['/login']">
                 <ion-icon class="icon-white" slot="icon-only" name="close-sharp"></ion-icon>
             </ion-button>
           </ion-col>
-  
+
         </ion-row>
       </ion-card-header>
       <ion-card-content>
-        <form (ngSubmit)="onSubmit(userForm)" #userForm="ngForm">
-  
+        <form #authForm="ngForm" (ngSubmit)="onSubmit()">
+
           <ion-input
             label="Name"
             label-placement="floating"
             fill="outline"
             type="text"
-            [(ngModel)]="user.name"
+            [(ngModel)]="userData().name"
             name="name"
             #name="ngModel"
             class="px-4"
-            [errorText]="errors.name? errors.name : 
-              'The name is required'"
+            errorText="The name is required"
             required
             >
           </ion-input>
-  
+
+          @if (errors()['name']) {
+            <ion-text class="ion-margin-start px-4" color="danger">
+              <small>{{ errors()['name'] }}</small>
+            </ion-text>
+          }
+
           <ion-input
             label="Lastname"
             label-placement="floating"
             fill="outline"
             type="text"
-            [(ngModel)]="user.lastname"
+            [(ngModel)]="userData().lastname"
             name="lastname"
             #lastname="ngModel"
             class="px-4 my-2"
-            [errorText]="errors.lastname? errors.lastname :
-              'The lastname is required'"
+            errorText="The lastname is required"
             required
             >
           </ion-input>
-  
+
+          @if (errors()['lastname']) {
+            <ion-text class="ion-margin-start px-4" color="danger">
+              <small>{{ errors()['lastname'] }}</small>
+            </ion-text>
+          }
+
           <ion-input
             label="Date"
             label-placement="floating"
             fill="outline"
             type="date"
-            [(ngModel)]="user.date"
+            [(ngModel)]="userData().birthDate"
             name="date"
             #date="ngModel"
             class="px-4 my-2"
-            [errorText]="errors.date? errors.date :
-              'Date is required'"
+            errorText="Date is required"
             required
             >
           </ion-input>
-  
+
+          @if (errors()['birthDate']) {
+            <ion-text class="ion-margin-start px-4" color="danger">
+              <small>{{ errors()['birthDate'] }}</small>
+            </ion-text>
+          }
+
           <ion-input
             label="Email"
             label-placement="floating"
             fill="outline"
             type="email"
-            [(ngModel)]="user.email"
+            [(ngModel)]="userData().email"
             name="email"
             #email="ngModel"
             class="px-4 mt-2 mb-2"
-            [errorText]="errors.email? errors.email : 
-              email.errors?.['email'] ? 'It does not have an email format':
+            [errorText]="email.errors?.['email'] ? 'It does not have an email format':
               'Email is required'"
             required
             email
             >
           </ion-input>
-  
+
+          @if (errors()['email']) {
+            <ion-text class="ion-margin-start px-4" color="danger">
+              <small>{{ errors()['email'] }}</small>
+            </ion-text>
+          }
+
           <ion-input
             label="Password"
             label-placement="floating"
             fill="outline"
             type="password"
-            [(ngModel)]="user.password"
+            [(ngModel)]="userData().password"
             name="password"
             #password="ngModel"
             class="px-4"
             [errorText]="
-              errors.password ? errors.password :
               password.errors?.['minlength'] ? 'The password must be 6 characters long' :
               'Password is required'
               "
@@ -104,34 +123,42 @@
             minlength="6"
             >
           </ion-input>
-          @if(this.errorPassConfirm){
-            <ion-label color="danger" class="ms-6" style="font-size: 12px;">
-              Password doesn't match
-            </ion-label>
+
+          @if (errors()['password']) {
+            <ion-text class="ion-margin-start px-4" color="danger">
+              <small>{{ errors()['password'] }}</small>
+            </ion-text>
           }
-  
-          @if(user.password && user.password.length >= 6){
+
+          @if(userData().password && userData().password.length >= 6){
             <ion-input
               label="Confirm password"
               label-placement="floating"
               fill="outline"
               type="password"
-              [(ngModel)]="this.passwordConfirm"
-              name="passwordConfirm"
-              #passwordConfirm="ngModel"
+              [(ngModel)]="userData().confirmPassword"
+              name="confirmPassword"
+              #confirmPassword="ngModel"
               class="px-4 mt-3 mb-2"
+              errorText="Must not be empty"
               required
               >
             </ion-input>
+
+            @if (!passwordsMatch()) {
+              <ion-text class="ion-margin-start px-4" color="danger">
+                <small>The passwords don't match</small>
+              </ion-text>
+            }
           }
-  
+
           <ion-button expand="block" type="submit" color="warning" class="mx-4 my-4">
-            Save
+            Register
           </ion-button>
-  
+
         </form>
       </ion-card-content>
-  
+
     </ion-card>
   </div>
 

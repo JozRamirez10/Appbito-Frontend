@@ -1,16 +1,40 @@
 
 <div class="monthlyProgress monthlyProgress-height" style="width: 100%;">
-    <div class="monthlyProgress-header">
-        <ion-button fill="clear" color="dark" (click)="prevYear()">
-          <ion-icon slot="icon-only" name="caret-back-outline"></ion-icon>
-        </ion-button>
-        
-        <ion-text>{{ currentDay.getFullYear() }}</ion-text>
-        
-        <ion-button fill="clear" color="dark" (click)="nextYear()">
-          <ion-icon slot="icon-only" name="caret-forward-outline"></ion-icon>
-        </ion-button>
-    </div>
 
-    <canvas #chartCanvas class="ion-margin-bottom">{{chart}}</canvas>
+  <div class="monthlyProgress-header">
+    <ion-button fill="clear" color="dark" (click)="changeYear(-1)">
+      <ion-icon slot="icon-only" name="caret-back-outline"></ion-icon>
+    </ion-button>
+
+    <ion-text>{{ currentYear() }}</ion-text>
+
+    <ion-button fill="clear" color="dark" (click)="changeYear(1)">
+      <ion-icon slot="icon-only" name="caret-forward-outline"></ion-icon>
+    </ion-button>
+  </div>
+
+  <div class="ion-margin-bottom">
+
+    @if (habitState.isMonthlyLoading()) {
+      <div class="ion-text-center ion-padding">
+        <ion-spinner name="crescent" color="primary"></ion-spinner>
+      </div>
+    } @else {
+      @if (chartSeries().length > 0) {
+        <apx-chart
+          [series]="chartSeries()"
+          [chart]="chartOptions.chart!"
+          [xaxis]="chartOptions.xaxis!"
+          [yaxis]="chartOptions.yaxis!"
+          [stroke]="chartOptions.stroke!"
+          [theme]="chartOptions.theme!"
+          [dataLabels]="chartOptions.dataLabels!"
+        />
+      } @else {
+        <div>
+          No habits data to display
+        </div>
+      }
+    }
+  </div>
 </div>

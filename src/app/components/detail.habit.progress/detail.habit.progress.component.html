@@ -1,12 +1,15 @@
 <ion-header class="d-flex align-items-center justify-content-between p-2">
-    
+
     <ion-col size="auto">
+        <!--
         <h4 class="offcanvas-title" id="offHabitProgressCanvas">{{habit.name}}</h4>
+        -->
+        <h4 class="offcanvas-title" id="offHabitProgressCanvas">Record progress</h4>
         <h6 class="fst-italic mt-1 ps-2">{{day | date:'fullDate'}}</h6>
     </ion-col>
 
     <ion-col size="auto">
-        <ion-button color="danger" (click)="closeHabitProgressCanvas()"> 
+        <ion-button color="danger" (click)="closeHabitProgressCanvas()">
             <ion-icon class="icon-white" slot="icon-only" name="close-sharp"></ion-icon>
         </ion-button>
     </ion-col>
@@ -14,55 +17,54 @@
 </ion-header>
 
 <ion-content fullscreen="true">
-    <form (ngSubmit)="onSubmit(habitProgressForm)" #habitProgressForm="ngForm">
-        @if(edit){
+    <form (ngSubmit)="onSubmit()">
+        @if (edit) {
             <ion-row class="p-2">
                 <ion-col>
                     <h5>Done</h5>
                     <ion-row class="d-flex align-items-center">
                         <ion-col>
-                            <ion-button color="medium" expand="block" (click)="setDone('-')">-</ion-button>
+                            <ion-button color="medium" expand="block" (click)="setDone(-1)">-</ion-button>
                         </ion-col>
                         <ion-col class="text-center">
-                            <ion-input [(ngModel)]="habitProgress.timesPerformed"
+                            <ion-input
+                                [(ngModel)]="progressForm.timesPerformed"
                                 name="timesPerformed"
-                                #timesPerformed="ngModel"
                                 disabled >
                             </ion-input>
                         </ion-col>
                         <ion-col>
-                            <ion-button color="medium" expand="block" (click)="setDone('+')">+</ion-button>
+                            <ion-button color="medium" expand="block" (click)="setDone(1)">+</ion-button>
                         </ion-col>
                     </ion-row>
                 </ion-col>
             </ion-row>
         }
-            
+
         <ion-row class="p-2">
             <ion-col>
                 <h5>Quick Note</h5>
                 <ion-row class="m-2">
                     <ion-textarea
-                        [(ngModel)]="habitProgress.note"
+                        [(ngModel)]="progressForm.note"
                         name="note"
-                        #note="ngModel"
                         [attr.placeholder]="edit ? 'Write a quick note... ' : '' "
-                        [attr.rows]="habitProgress.id > 0 ? 7 : 10"
-                        [disabled]="edit ? false : true"
+                        [rows]="progressForm.id ? 7 : 10"
+                        [disabled]="!edit"
                         >
                     </ion-textarea>
                 </ion-row>
             </ion-col>
         </ion-row>
 
-        @if(edit){
+        @if (edit) {
             <ion-row class="mx-2">
                 <ion-col>
                     <ion-button type="submit" color="warning" expand="block">Save</ion-button>
                 </ion-col>
             </ion-row>
 
-            @if(habitProgress.id > 0){
+            @if (progressForm.id) {
                 <ion-row class="mx-2">
                     <ion-col>
                         <ion-button color="danger" expand="block" (click)="onDeleteHabitProgress()">Delete</ion-button>
@@ -70,7 +72,7 @@
                 </ion-row>
             }
         }
-        
+
     </form>
 
 </ion-content>

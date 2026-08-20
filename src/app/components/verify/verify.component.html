@@ -1,0 +1,54 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button [routerLink]="['/login']">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M3 14.5A1.5 1.5 0 0 1 1.5 13V3A1.5 1.5 0 0 1 3 1.5h8a.5.5 0 0 1 0 1H3a.5.5 0 0 0-.5.5v10a.5.5 0 0 0 .5.5h10a.5.5 0 0 0 .5-.5V8a.5.5 0 0 1 1 0v5a1.5 1.5 0 0 1-1.5 1.5z"/>
+          <path d="m8.354 10.354 7-7a.5.5 0 0 0-.708-.708L8 9.293 5.354 6.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0"/>
+        </svg>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Appbito</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="safe-area-top safe-area-bottom ion-padding">
+
+    @if (status() === VerifyStatus.LOADING) {
+      <ion-card color="warning" class="ion-text-center ion-margin-top">
+        <ion-card-header>
+          <h4 style="margin: 0;">Verifying your account...</h4>
+        </ion-card-header>
+        <ion-card-content class="ion-padding-vertical">
+          <ion-spinner name="crescent"></ion-spinner>
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @else if(status() === VerifyStatus.SUCCESS) {
+      <ion-card color="success" class="ion-text-center ion-margin-top">
+        <ion-card-header>
+          <h4 style="margin: 0;">
+            Your account has been successfully verified!
+            <br><br>
+            Please log in.
+          </h4>
+        </ion-card-header>
+      </ion-card>
+
+      <div class="ion-text-center ion-margin-top px-3">
+        <ion-button expand="block" color="primary" (click)="toLogin()">
+          Log in
+        </ion-button>
+      </div>
+    } @else {
+      <ion-card color="danger" class="ion-text-center ion-margin-top">
+        <ion-card-header>
+          <h4 style="margin: 0;">The token is invalid or has expired</h4>
+        </ion-card-header>
+      </ion-card>
+    }
+
+  </div>
+</ion-content>

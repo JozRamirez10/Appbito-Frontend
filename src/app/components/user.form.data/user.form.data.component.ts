@@ -1,74 +1,103 @@
-import { Component, OnInit } from '@angular/core';
-import { FormsModule, NgForm } from '@angular/forms';
-import { Store } from '@ngrx/store';
-import { User } from 'src/app/models/user';
-import { logout } from 'src/app/store/auth/auth.action';
-import { edit } from 'src/app/store/user/user.action';
-import { UserState } from 'src/app/store/user/user.reducer';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, effect, inject, signal, untracked } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { IonButton, IonCol, IonDatetime, IonDatetimeButton, IonIcon, IonInput, IonList, IonModal, IonRow, IonText } from "@ionic/angular/standalone";
+import { finalize } from 'rxjs';
+import { BaseForm } from 'src/app/classes/base.form';
+import { ModalActions } from 'src/app/enums/modal.actions.enum';
+import { UpdateUserRequest } from 'src/app/models/dtos/user.model';
+import { AuthService } from 'src/app/services/auth.service';
 import { ModalService } from 'src/app/services/modal.service';
-import { IonList, IonRow, IonCol, IonButton, IonIcon, IonDatetimeButton, IonModal, IonText, IonInput } from "@ionic/angular/standalone";
+import { UserState } from 'src/app/states/user.state';
 
 @Component({
   selector: 'app-user-form-data',
   standalone: true,
   imports: [
     IonText, IonModal, IonDatetimeButton, IonIcon, IonButton, IonCol, IonRow, IonList, IonInput,
+    IonDatetime,
     FormsModule,
     CommonModule
   ],
   templateUrl: './user.form.data.component.html',
   styleUrls: ['./user.form.data.component.scss'],
 })
-export class UserFormDataComponent {
+export class UserFormDataComponent extends BaseForm {
 
-  buttonEdits = [
-    {
-      button: 'name',
-      edit: false
-    },
-    {
-      button: 'lastname',
-      edit: false
-    },
-    {
-      button: 'date',
-      edit: false
-    }
-  ];
+  readonly userState = inject(UserState);
+  readonly authService = inject(AuthService);
 
-  user ! : User;
-  errors : any = {};
+  private readonly modalService = inject(ModalService);
 
-  constructor(
-    private store : Store<{users : UserState, auth: any}>,
-    private modalService : ModalService
-  ) {
-    this.store.select('users').subscribe(state => {
-      this.user = {... state.user};
-      this.errors = state.errors;
+  editing = signal<Record<string, boolean>>(this.getEditingInit());
+
+  userForm = signal<UpdateUserRequest>({} as UpdateUserRequest);
+
+  constructor() {
+    super();
+
+    effect(() => {
+      const user = this.userState.user();
+      if (user) {
+        untracked(() => {
+          this.userForm.set({
+            name: user.name,
+            lastname: user.lastname,
+            birthDate: user.birthDate
+          });
+        });
+      }
     });
   }
 
-  btnEdit(input : string) : void {
-    this.buttonEdits = this.buttonEdits.map(field => field.button == input ? {... field, edit: !field.edit} : field);
-  }
-
-  isEdit(input : string) : boolean{
-    const field = this.buttonEdits.find(field => field.button == input);
-    return field ? field.edit : false;
-  }
-
-  onSubmit(userForm : NgForm) : void {
-    if(userForm.valid){
-      this.store.dispatch(edit({userUpdate: this.user}));
-      this.modalService.showModal('loading');
-      
+  toggleEdit(field : keyof UpdateUserRequest) : void {
+    this.editing.update(prev => ({ ...prev, [field]: !prev[field] }));
+    if (!this.editing()[field]) {
+      const user = this.userState.user();
+      if (user) {
+        this.userForm.update(prev => ({ ...prev, [field]: user[field] }));
+        this.clearErrors();
+      }
     }
   }
 
-  handlerLogout() : void {
-    this.store.dispatch(logout());
+  isEditing(field : keyof UpdateUserRequest) : boolean {
+    return this.editing()[field];
   }
 
+  onSubmit() : void {
+    const data = this.userForm();
+    this.clearErrors();
+
+    if (!data.name || !data.lastname || !data.birthDate) {
+      return;
+    }
+
+    this.modalService.showModal(ModalActions.LOADING);
+
+    this.userState.updateProfileData(data).pipe(
+      finalize(() => this.modalService.dismissLoading())
+    ).subscribe({
+      next: () => {
+        this.modalService.showModal(ModalActions.EDIT);
+        this.editing.set(this.getEditingInit());
+      },
+      error: (err : HttpErrorResponse) => {
+        this.handleFormError(err);
+      }
+    });
+  }
+
+  handlerLogout() : void {
+    this.authService.logout();
+  }
+
+  private getEditingInit() : Record<string, boolean> {
+    return {
+      name: false,
+      lastname: false,
+      birthDate: false
+    }
+  }
 }
