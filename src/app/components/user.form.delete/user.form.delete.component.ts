@@ -1,10 +1,18 @@
-import { Component } from '@angular/core';
-import { FormsModule, NgForm } from '@angular/forms';
-import { Store } from '@ngrx/store';
-import { User } from 'src/app/models/user';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { IonButton, IonInput, IonList, IonRow, IonText } from "@ionic/angular/standalone";
+import { finalize } from 'rxjs';
+import { BaseForm } from 'src/app/classes/base.form';
+import { ModalActions } from 'src/app/enums/modal.actions.enum';
+import { DeleteUserRequest } from 'src/app/models/dtos/user.model';
+import { AuthService } from 'src/app/services/auth.service';
 import { ModalService } from 'src/app/services/modal.service';
-import { remove } from 'src/app/store/user/user.action';
-import { IonText, IonList, IonRow, IonButton, IonInput, AlertController } from "@ionic/angular/standalone";
+import { UserState } from 'src/app/states/user.state';
+
+interface DeleteForm extends DeleteUserRequest {
+  confirmPassword : string;
+}
 
 @Component({
   selector: 'app-user-form-delete',
@@ -16,68 +24,52 @@ import { IonText, IonList, IonRow, IonButton, IonInput, AlertController } from "
   templateUrl: './user.form.delete.component.html',
   styleUrls: ['./user.form.delete.component.scss'],
 })
-export class UserFormDeleteComponent {
+export class UserFormDeleteComponent extends BaseForm {
 
-  user ! : User;
+  readonly userState = inject(UserState);
+  private readonly authService = inject(AuthService);
+  private readonly modalService = inject(ModalService);
 
-  password ! : string;
-  passwordConfirm ! : string;
+  deleteData = signal<DeleteForm>({} as DeleteForm);
 
-  matches : boolean = true;
-  passwordConfirmEmpty : boolean = false;
+  passwordsMatch = signal<boolean>(true);
 
-  errors : any = {};
+  async onSubmit() : Promise<void> {
 
-  constructor(
-    private store : Store<{users : any}>,
-    private modalService : ModalService,
-    private alertCtrl : AlertController
-  ) {
-    this.password = '';
-    this.passwordConfirm = '';
-    this.store.select('users').subscribe(state => {
-      this.user = {... state.user},
-      this.errors = state.errors;
-    });
+    const data = this.deleteData();
+
+    this.clearErrors();
+    this.passwordsMatch.set(true);
+
+    if (!data.password || !data.confirmPassword) {
+      return;
+    }
+
+    if (data.password !== data.confirmPassword) {
+      this.passwordsMatch.set(false);
+      return;
+    }
+
+    const isConfirmed = await this.modalService.confirmDelete();
+
+    if (isConfirmed) {
+      this.executeDelete(data.password);
+    }
   }
 
-  async onSubmit(deleteForm : NgForm) : Promise<void> {
-    this.matches = true;
-    this.passwordConfirmEmpty = false;
+  private executeDelete(password : string) : void {
+    this.modalService.showModal(ModalActions.LOADING);
 
-    if(deleteForm.valid){
-      if(this.passwordConfirm == undefined || this.passwordConfirm == ''){
-        this.passwordConfirmEmpty = true;
-      }else if(this.password != this.passwordConfirm){
-        this.matches = false;
-      }else{
-        const alert = await this.alertCtrl.create({
-          header: 'Are you sure?',
-          message: "You won't be able to revert this!",
-          buttons:[
-            {
-              text: 'Cancel',
-              role: 'cancel',
-              cssClass: 'alert-button-cancel'
-            },
-            {
-              text: 'Yes, detele it!',
-              role: 'confirm',
-              cssClass: 'alert-button-confirm',
-              handler: () => {
-                this.store.dispatch(remove({
-                  request: { password : this.password },
-                  id: this.user.id
-                }))
-
-                this.modalService.showModal('loading');
-              }
-            }
-          ]
-        });
-        await alert.present();
-
+    this.userState.deleteAccount({ password }).pipe(
+      finalize(() => this.modalService.dismissLoading())
+    ).subscribe({
+      next: async () => {
+        await this.modalService.showModal(ModalActions.USER_REMOVED);
+        this.authService.logout();
+      },
+      error: (err : HttpErrorResponse) => {
+        this.handleFormError(err);
       }
-    }
+    });
   }
 }

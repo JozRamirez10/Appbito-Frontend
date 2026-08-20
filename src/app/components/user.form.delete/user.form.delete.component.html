@@ -1,5 +1,4 @@
-<form (ngSubmit)="onSubmit(deleteForm)" #deleteForm="ngForm" class="ion-margin">
-
+<div class="ion-margin">
   <ion-list class="ion-padding-horizontal">
 
     <ion-row class="ion-margin-bottom">
@@ -8,13 +7,22 @@
         label="Current Password"
         label-placement="floating"
         fill="outline"
-        [(ngModel)]="this.password" name="password" #password="ngModel"
+        [(ngModel)]="deleteData().password"
+        name="password"
+        #password="ngModel"
         required
-        [errorText]="'Password is required'"
+        errorText="Password is required"
         >
       </ion-input>
-      @if(!matches){
-        <ion-text class="ion-margin-start" color="danger">Password doesn't match</ion-text>
+
+      @if (errors()['password']) {
+        <ion-text class="ion-margin-start" color="danger">
+          <small>{{ errors()['password'] }}</small>
+        </ion-text>
+      } @else if(errors()['error']) {
+        <ion-text class="ion-margin-start" color="danger">
+          <small>{{ errors()['error'] }}</small>
+        </ion-text>
       }
     </ion-row>
 
@@ -24,19 +32,26 @@
         label="Confirm Password"
         label-placement="floating"
         fill="outline"
-        [(ngModel)]="this.passwordConfirm" name="passwordConfirm" #passwordConfirm="ngModel"
+        [(ngModel)]="deleteData().confirmPassword"
+        name="confirmPassword"
+        #confirmPassword="ngModel"
         required
         errorText="Must not be empty"
         >
       </ion-input>
+
+      @if (!passwordsMatch()) {
+        <ion-text class="ion-margin-start" color="danger">
+          <small>The passwords don't match</small>
+        </ion-text>
+      }
     </ion-row>
 
     <ion-row class="ion-justify-content-center">
-      <ion-button fill="outline" color="danger" type="submit">
+      <ion-button fill="outline" color="danger" (click)="onSubmit()">
         Delete Account
       </ion-button>
     </ion-row>
 
   </ion-list>
-
-</form>
+</div>
