@@ -1,48 +1,44 @@
-import { Injectable } from '@angular/core';
-import { Habit } from '../models/habit';
 import { HttpClient } from '@angular/common/http';
-import { map, Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { inject, Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { environment } from 'src/environments/environment';
+import { API_ROUTES } from '../constants/constants';
+import { CreateHabitRequest, Habit, UpdateHabitBatchRequest, UpdateHabitRequest } from '../models/dtos/habit.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class HabitService {
 
-  private url : string = environment.apiUrl + "/api/habits";
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = `${environment.apiUrl}${API_ROUTES.HABITS}`;
 
-  constructor(
-    private http : HttpClient
-  ) { }
-
-  findAll() : Observable<Habit[]>{
-    return this.http.get<Habit[]>(this.url)
+  getHabitById(id : number) : Observable<Habit> {
+    return this.http.get<Habit>(`${this.apiUrl}/${id}`);
   }
 
-  findByUserId(id : number) : Observable<Habit[]>{
-    return this.http.get<Habit[]>(`${this.url}/user/${id}`)
+  getMyHabits() : Observable<Habit[]> {
+    return this.http.get<Habit[]>(`${this.apiUrl}${API_ROUTES.ME}`);
   }
 
-  findById(id : number) : Observable<Habit>{
-    return this.http.get<Habit>(`${this.url}/${id}`)
+  getTodayHabits() : Observable<Habit[]> {
+    return this.http.get<Habit[]>(`${this.apiUrl}${API_ROUTES.TODAY}`);
   }
 
-  create(habit : Habit) : Observable<Habit>{
-    return this.http.post<Habit>(this.url, habit)
+  createHabit(habit : CreateHabitRequest) : Observable<Habit> {
+    return this.http.post<Habit>(this.apiUrl, habit);
   }
 
-  update(habit : Habit) : Observable<Habit>{
-    return this.http.put<Habit>(`${this.url}/${habit.id}`, habit)
+  updateHabit(id : number, habit : UpdateHabitRequest) : Observable<Habit> {
+    return this.http.put<Habit>(`${this.apiUrl}/${id}`, habit);
   }
 
-  updateBatch(habits : Habit[]) : Observable<Habit[]>{
-    return this.http.put<Habit[]>(`${this.url}/batch`, habits)
+  updateHabitBatch(habits : UpdateHabitBatchRequest[]) : Observable<Habit[]> {
+    return this.http.put<Habit[]>(`${this.apiUrl}${API_ROUTES.BATCH}`, habits);
   }
 
-  delete(id : number) : Observable<number>{
-    return this.http.delete<number>(`${this.url}/${id}`)
-    .pipe(
-      map( () => id)
-    );
+  deleteHabit(id : number) : Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
+
 }

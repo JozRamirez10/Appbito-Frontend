@@ -1,109 +1,141 @@
-import { HttpClient } from "@angular/common/http";
-import { Injectable } from "@angular/core";
-import { Store } from "@ngrx/store";
-import { BehaviorSubject, catchError, Observable, tap, throwError } from "rxjs";
-import { JwtTokenService } from "./jwt.token.service";
+import { HttpClient, HttpErrorResponse, HttpResponse } from "@angular/common/http";
+import { inject, Injectable, NgZone } from "@angular/core";
 import { Router } from "@angular/router";
-import { environment } from "../../environments/environment";
 import { Preferences } from "@capacitor/preferences";
-import { Http } from "@capacitor-community/http";
+import { BehaviorSubject, finalize, firstValueFrom, Observable, switchMap } from "rxjs";
+import { environment } from "../../environments/environment";
+import { AUTH, GENERAL, HTTP_HEADERS, PATHS } from "../constants/constants";
+import { ModalActions } from "../enums/modal.actions.enum";
+import { LoginRequest } from "../models/dtos/auth.model";
+import { JwtTokenService } from "./jwt.token.service";
+import { ModalService } from "./modal.service";
 
 @Injectable({
     providedIn: 'root'
 })
 export class AuthService {
-    
-    private url: string = environment.apiUrl;
 
-    private tokenReady$ = new BehaviorSubject<boolean>(false);
+    private readonly http = inject(HttpClient);
+    private readonly jwtService = inject(JwtTokenService);
+    private readonly modalService = inject(ModalService);
+    private readonly ngZone = inject(NgZone)
+    private readonly router = inject(Router);
 
-    constructor(
-        private http : HttpClient,
-        private store : Store<{auth : any}>,
-        private jwtService : JwtTokenService,
-        private router : Router,
-    ) { }
+    private readonly url = environment.apiUrl;
+    private readonly apiUrl= `${this.url}${PATHS.AUTH}`;
+    private readonly tokenReady$ = new BehaviorSubject<boolean>(false);
 
     async verifyAccount(token : string) : Promise<boolean> {
-        // return this.http.get(`${this.url}/auth/verify?token=${token}`).toPromise()
         try{
-            await Http.get({
-                url: `${this.url}/auth/verify?token=${token}` ,
-                headers: { 'Content-Type': 'application/json' }
-            })
+            await firstValueFrom(this.http.get(`${this.apiUrl}${PATHS.VERIFY}`, {
+                params: {token}
+            }));
             return true;
         }catch{
             return false;
         }
-        
     }
 
-    loginUser({email, password} : any) : Observable<any> {
-        return this.http.post<any>(`${this.url}/login`, {email, password}, {
-            observe: 'response',
+    loginUser(credentials : LoginRequest) : Observable<HttpResponse<any>> {
+        return this.http.post<any>(`${this.url}${PATHS.LOGIN}`, credentials, {
+            observe: GENERAL.RESPONSE,
             withCredentials: true
         }).pipe(
-            tap(response => {
-                const token = response.headers.get('Authorization');
-                if(!token){
-                    return;
+            switchMap(async (response) => {
+                const token = response.headers.get(HTTP_HEADERS.AUTHORIZATION);
+                if(token) {
+                    await this.setToken(token);
                 }
-                this.setToken(token);
-            }),
-            catchError(error => {
-                return throwError( () => error);
+                return response;
             })
         );
     }
 
-    refreshToken() : Promise<string | null> {
-        return new Promise( (resolve) => {
-            this.http.post<any>(`${this.url}/auth/refresh`, {}, {
-                observe: 'response',
-                withCredentials: true
-            }).subscribe({
-                next: response => {
-                    const token = response.headers.get("Authorization");
-                    if(!token){
-                        resolve(null)
-                        return;
-                    }
-                    this.setToken(token);
-                    resolve(token);
-                },
-                error: () => {
-                    resolve(null);
-                }
-            })
-        });     
+    async refreshToken() : Promise<string | null> {
+        try{
+            const response = await firstValueFrom(
+                this.http.post<any>(`${this.apiUrl}${PATHS.REFRESH}`, {}, {
+                    observe: GENERAL.RESPONSE,
+                    withCredentials: true
+                })
+            );
+
+            const token = response.headers.get(HTTP_HEADERS.AUTHORIZATION);
+            if (token) {
+                await this.setToken(token);
+                return this.jwtService.getToken();
+            }
+            return null;
+        } catch {
+            return null;
+        }
     }
 
-    logout() : Observable<any>{
-        return this.http.post<any>(`${this.url}/auth/logout`, {}, {withCredentials: true});
-    }
-    
-    async setToken(token : string){
-        // console.log('[setToken] Guardando token:', token);
-        await Preferences.set({key:'token', value: token});
-        this.jwtService.setToken(token);
+    cleanToken(token : string) : string {
+        return token.replace(AUTH.BEARER, GENERAL.EMPTY_STRING).trim();
     }
 
-    async getToken() : Promise<string | null > {
+    logout() : void {
+        this.modalService.showModal(ModalActions.LOADING);
+
+        this.http.post<any>(`${this.apiUrl}${PATHS.LOGOUT}`, {}, {
+            withCredentials: true
+        }).pipe(
+            finalize(() => this.modalService.dismissLoading())
+        ).subscribe({
+            next: async () => {
+                await this.removeSession();
+                this.ngZone.run(() => {
+                    this.router.navigateByUrl(PATHS.LOGIN, {replaceUrl: true});
+                });
+            },
+            error: (err : HttpErrorResponse) => {
+                this.forceLogout(err);
+            }
+        });
+    }
+
+    async forceLogout(error ? : HttpErrorResponse) {
+
+        await this.removeSession();
+        this.modalService.dismissLoading();
+
+        const message = error?.error?.error || GENERAL.EMPTY_STRING;
+        const modal_action = message.includes(AUTH.TOKEN_EXPIRED)
+            ? ModalActions.EXPIRED
+            : ModalActions.ERROR_SESSION;
+
+        this.ngZone.run(() => {
+            this.router.navigateByUrl(PATHS.LOGIN, {replaceUrl: true}).then(() => {
+                this.modalService.showModal(modal_action);
+            });
+        });
+    }
+
+    async setToken(token : string) {
+        const cleanToken = this.cleanToken(token);
+        await Preferences.set({key:AUTH.TOKEN, value: cleanToken});
+        this.jwtService.setToken(cleanToken);
+        this.tokenReady$.next(true);
+    }
+
+    async getToken() : Promise<string | null> {
+
         let token = this.jwtService.getToken();
+
         if(!token){
-            const storedToken = await Preferences.get({key:'token'});
+            const storedToken = await Preferences.get({key: AUTH.TOKEN});
             token = storedToken.value ?? null;
             if(token){
                 this.jwtService.setToken(token);
             }
         }
-        // const tokenWithoutBearer = token?.replace('Bearer ', '');
-        // return tokenWithoutBearer;
-        this.tokenReady$.next(true);
-        return token?.replace('Bearer ', '') ?? null;
+
+        this.tokenReady$.next(!!token);
+        return token;
     }
 
-    isTokenReady$() {
+    isTokenReady$() : Observable<boolean> {
         return this.tokenReady$.asObservable();
     }
 
@@ -116,8 +148,7 @@ export class AuthService {
     }
 
     async removeSession() : Promise<void> {
-        // sessionStorage.removeItem('token');
-        await Preferences.remove({key: 'token'});
+        await Preferences.remove({key: AUTH.TOKEN});
         this.jwtService.setToken(null);
         this.tokenReady$.next(false);
     }
