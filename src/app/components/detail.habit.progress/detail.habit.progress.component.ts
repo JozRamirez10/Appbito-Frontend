@@ -1,13 +1,16 @@
-import { Component, Input } from '@angular/core';
-import { FormsModule, NgForm } from '@angular/forms';
-import { Store } from '@ngrx/store';
-import { Habit, HabitProgress } from 'src/app/models/habit';
-import { addHabitProgress, removeHabitProgress, updateHabitProgress } from 'src/app/store/habitProgress/habit.progress.action';
 import { CommonModule } from '@angular/common';
-import { ModalService } from 'src/app/services/modal.service';
-import { IonHeader,IonCol, IonButton, IonIcon, IonContent, IonRow, IonInput, ModalController, IonTextarea } from "@ionic/angular/standalone";
+import { Component, inject, Input, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { IonButton, IonCol, IonContent, IonHeader, IonIcon, IonInput, IonRow, IonTextarea, ModalController } from "@ionic/angular/standalone";
 import { addIcons } from 'ionicons';
 import { closeSharp } from 'ionicons/icons';
+import { finalize } from 'rxjs';
+import { GENERAL, MODAL_CONTROLLER } from 'src/app/constants/constants';
+import { ModalActions } from 'src/app/enums/modal.actions.enum';
+import { CreateHabitProgressRequest, HabitProgress, UpdateHabitProgressRequest } from 'src/app/models/dtos/habit.progress.model';
+import { ModalService } from 'src/app/services/modal.service';
+import { HabitState } from 'src/app/states/habit.state';
+import { formatDateToString } from 'src/app/utils/helpers';
 
 @Component({
   selector: 'app-detail-habit-progress',
@@ -20,88 +23,94 @@ import { closeSharp } from 'ionicons/icons';
   templateUrl: './detail.habit.progress.component.html',
   styleUrls: ['./detail.habit.progress.component.scss'],
 })
-export class DetailHabitProgressComponent {
+export class DetailHabitProgressComponent implements OnInit {
 
   @Input() edit : boolean = false;
+  @Input({ required: true }) habitId! : number;
+  @Input({ required: true }) day! : Date | null;
+  @Input() monthProgress: HabitProgress[] = [];
 
-  habitProgress ! : HabitProgress;
+  private readonly habitState = inject(HabitState);
+  private readonly modalController = inject(ModalController);
+  private readonly modalService = inject(ModalService);
 
-  habit ! : Habit;
+  progressForm : Partial<HabitProgress> = {
+    timesPerformed: 0,
+    note: ''
+  };
 
-  day ! : Date;
-
-  constructor (
-    private store : Store<{habitProgress : any, habits : any, loading : any}>,
-    private modalController : ModalController,
-    private modalService : ModalService
-  ) {
-
-    addIcons({
-      closeSharp
-    });
-
-    this.habitProgress = new HabitProgress();
-    this.habit = new Habit();
-    
-    this.store.select('habitProgress').subscribe(state => {
-      this.habitProgress = {...state.habitProgress};
-      this.habit = {...state.habit};
-      this.day = state.day;
-    });
-
+  constructor () {
+    addIcons({ closeSharp });
   }
 
-  setDone(operation : string) : void{
+  ngOnInit() : void {
 
-    let updateProgress = {... this.habitProgress};
+    if (!this.day) return;
 
-    switch(operation){
-      case '+':
-        updateProgress.timesPerformed++;
-        break;
-      case '-':
-        if(updateProgress.timesPerformed > 0)
-          updateProgress.timesPerformed--;
-        break;
-      default:
-        break;
-    }
+    const formattedDate = formatDateToString(this.day);
+    const existing = this.monthProgress.find(p => p.date === formattedDate);
 
-    this.habitProgress = {...updateProgress};
-
+    this.progressForm = existing
+      ? { ...existing }
+      : { habitId: this.habitId, date: formattedDate, timesPerformed: 0,
+        note: GENERAL.EMPTY_STRING };
   }
 
-  onSubmit(habitProgressForm : NgForm) : void {
-    if(this.habitProgress.timesPerformed > 0 || (this.habitProgress.note !== undefined && this.habitProgress.note?.length > 0) ){
-      if(this.habitProgress.id === undefined){
-        this.habitProgress.date = this.day;
-        this.habitProgress.habitId = this.habit.id;
-        this.store.dispatch(addHabitProgress({habitProgressNew: this.habitProgress }));
-      }else{
-        this.store.dispatch(updateHabitProgress({habitProgressUpdate: this.habitProgress }));
-      }
-      // showModal('loading');
-      this.modalService.showModal('loading');
-      this.closeHabitProgressCanvas();
-    }else{
-      const message = 'You should include the times you have done it or a quick note';
-      // showModal('custom', "Error", message, "error");
-      this.modalService.showModal('custom', "Error", message, "error");
+  setDone(increment : number) : void {
+    const currentTimes = this.progressForm.timesPerformed || 0;
+    const newTimes = currentTimes + increment;
+
+    if (newTimes >= 0) {
+      this.progressForm.timesPerformed = newTimes;
     }
   }
 
-  onDeleteHabitProgress(){
-    this.store.dispatch(removeHabitProgress({
-      habitId: this.habit.id,
-      habitProgressId: this.habitProgress.id
-    }));
-    // showModal('loading');
-    this.modalService.showModal('loading');
-    this.closeHabitProgressCanvas();
+  onSubmit() : void {
+
+    const times = this.progressForm.timesPerformed || 0;
+    const note = this.progressForm.note?.trim() || GENERAL.EMPTY_STRING;
+
+    if (times <= 0 && note.length === 0) {
+      this.modalService.showModal(ModalActions.ERROR_HABIT_PROGRESS_SAVE);
+      return;
+    }
+
+    this.modalService.showModal(ModalActions.LOADING);
+
+    const payload = this.progressForm.id
+      ? { timesPerformed: times, note } as UpdateHabitProgressRequest
+      : { habitId: this.habitId, date: this.progressForm.date, timesPerformed: times,
+        note } as CreateHabitProgressRequest;
+
+    this.habitState.saveHabitProgress(this.habitId, this.progressForm.id, payload).pipe(
+      finalize(() => this.modalService.dismissLoading())
+    ).subscribe({
+      next: () => {
+        this.modalController.dismiss(null, MODAL_CONTROLLER.SUCCESS);
+        this.modalService.showModal(ModalActions.EDIT);
+      },
+      error: () => {}
+    });
   }
 
-  closeHabitProgressCanvas(){
-    this.modalController.dismiss(null, 'cancel');
+  onDeleteHabitProgress() : void {
+
+    if(!this.progressForm.id) return;
+
+    this.modalService.showModal(ModalActions.LOADING);
+
+    this.habitState.deleteHabitProgress(this.habitId, this.progressForm.id).pipe(
+      finalize(() => this.modalService.dismissLoading())
+    ).subscribe({
+      next: () => {
+        this.modalController.dismiss(null, MODAL_CONTROLLER.SUCCESS);
+        this.modalService.showModal(ModalActions.DELETE);
+      },
+      error: () => {}
+    });
   }
 
+  closeHabitProgressCanvas() {
+    this.modalController.dismiss(null, MODAL_CONTROLLER.CANCEL);
+  }
 }
