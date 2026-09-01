@@ -12,7 +12,6 @@ $RECYCLE.BIN/
 *.log
 log.txt
 
-
 /.sourcemaps
 /.versions
 /coverage
@@ -31,8 +30,9 @@ log.txt
 
 # Node
 /node_modules
-npm-debug.log
-yarn-error.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # IDEs and editors
 .idea/
@@ -46,12 +46,7 @@ yarn-error.log
 
 # Visual Studio Code
 .vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
 .history/*
-
 
 # Miscellaneous
 /.angular
@@ -74,4 +69,8 @@ Thumbs.db
 .env.*
 *.local
 
+# Keystores y Certificados de Producción
 *.jks
+*.keystore
+*.pem
+*.cer

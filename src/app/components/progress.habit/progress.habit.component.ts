@@ -1,35 +1,34 @@
-import { Component, Input, OnInit } from '@angular/core';
-import { HabitProgress } from 'src/app/models/habit';
-import { HabitProgressService } from 'src/app/services/habit-progress.service';
+import { Component, inject, Input, OnInit } from '@angular/core';
+
 import { CalendarProgressComponent } from "../calendar.progress/calendar.progress.component";
+
 import { IonCard, IonCardContent } from "@ionic/angular/standalone";
+import { HabitProgress } from 'src/app/models/dtos/habit.progress.model';
+import { HabitState } from 'src/app/states/habit.state';
 
 @Component({
   selector: 'app-progress-habit',
   standalone: true,
   imports: [
-    IonCardContent, IonCard, 
+    IonCardContent, IonCard,
     CalendarProgressComponent
 ],
   templateUrl: './progress.habit.component.html',
   styleUrls: ['./progress.habit.component.scss'],
 })
-export class ProgressHabitComponent  implements OnInit {
+export class ProgressHabitComponent implements OnInit {
 
   @Input() edit : boolean = false;
-  @Input() habitId ! : number;
-  @Input() habitProgress ! : HabitProgress[];
+  @Input({required : true}) habitId! : number;
+  @Input({required : true}) habitProgress! : HabitProgress[];
+  @Input() streak? : number | null;
 
-  public counterStreak ! : number;
+  private readonly habitState = inject(HabitState);
 
-  constructor(
-    private habitProgressService : HabitProgressService    
-  ){
-    this.counterStreak = 0;
-  } 
+  ngOnInit(): void {
 
-  async ngOnInit(): Promise<void> {
-    this.counterStreak = await this.habitProgressService.getStreakByIdHabit(this.habitId);
+    if(!this.habitId) return;
+
+    this.habitState.loadHabitStreak(this.habitId);
   }
-
 }

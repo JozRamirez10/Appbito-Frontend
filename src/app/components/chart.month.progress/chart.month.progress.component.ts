@@ -1,233 +1,124 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import { Store } from '@ngrx/store';
-import { ChartType } from 'chart.js';
-import { Chart } from 'chart.js/auto'
-import { combineLatest, Observable, Subject, takeUntil } from 'rxjs';
-import { Habit, MonthlyHabit } from 'src/app/models/habit';
-import { selectHabitProgressByMonth, selectHabitsWithProgress } from 'src/app/selectors/habit.selector';
-import { loadHabitProgressByMonth } from 'src/app/store/habitProgressMonthly/habit.progress.month.action';
-import { monthNames } from 'src/app/utils/helpers';
-import { IonButton, IonIcon, IonText } from "@ionic/angular/standalone";
+import { Component, computed, DestroyRef, effect, ElementRef, inject, OnInit, signal, untracked } from '@angular/core';
+import { IonButton, IonIcon, IonSpinner, IonText } from "@ionic/angular/standalone";
 import { addIcons } from 'ionicons';
 import { caretBackCircleOutline, caretForwardCircleOutline } from 'ionicons/icons';
+import { ApexAxisChartSeries, ApexChart, ApexDataLabels, ApexStroke, ApexTheme, ApexXAxis, ApexYAxis, NgApexchartsModule } from "ng-apexcharts";
+import { APP, CALENDAR } from 'src/app/constants/constants';
+import { HabitState } from 'src/app/states/habit.state';
+import { getMonthlyProgressKey } from 'src/app/utils/helpers';
+
+export type ChartOptions = {
+  series: ApexAxisChartSeries;
+  chart: ApexChart;
+  xaxis: ApexXAxis;
+  yaxis: ApexYAxis;
+  theme: ApexTheme;
+  stroke: ApexStroke;
+  dataLabels: ApexDataLabels;
+}
 
 @Component({
   selector: 'app-chart-month-progress',
   standalone: true,
-  imports: [
-    IonText, IonIcon, IonButton
+  imports: [IonSpinner,
+    IonText, IonIcon, IonButton, NgApexchartsModule
   ],
   templateUrl: './chart.month.progress.component.html',
-  styleUrls: ['./chart.month.progress.component.scss'],
+  styleUrls: ['./chart.month.progress.component.scss']
 })
-export class ChartMonthProgressComponent  implements OnInit {
-  @ViewChild('chartCanvas', {static: false}) chartCanvas!: ElementRef;
+export class ChartMonthProgressComponent implements OnInit {
 
-  private destroy$ = new Subject<void>();
+  public readonly habitState = inject(HabitState);
+  private readonly elementRef = inject(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
 
-  chart ! : Chart;
-  monhtNames : string[] = monthNames;
-  currentDay : Date = new Date();
+  readonly monthNames = CALENDAR.MONTH_NAMES;
+  currentYear = signal<number>(new Date().getFullYear());
 
-  habitProgressMonthly$ ! : Observable<any>;
-  habitProgressMonthly ! : any;
+  chartSeries = computed<ApexAxisChartSeries>(() => {
+    const habits = this.habitState.habits();
+    const stats = this.habitState.habitProgressMonthly();
+    const year = this.currentYear();
 
-  habits$ ! : Observable<Habit[]>;
-  habits ! : Habit[];
+    if (!habits || habits.length === 0) return [];
 
-  monthlyHabits ! : MonthlyHabit[];
-  
-  constructor(
-    private store : Store<{habits : any}>
-  ) {
-    addIcons({
-      caretBackCircleOutline,
-      caretForwardCircleOutline
+    const statsMap = new Map<string, number>();
+
+    stats.forEach(s => {
+      const key = getMonthlyProgressKey(s.year, s.month, s.habitId);
+      statsMap.set(key, s.totalTimesPerformed);
+    })
+
+    return habits.map(habit => {
+      const data = this.monthNames.map((_, index) => {
+        const month = index + 1;
+        const key = getMonthlyProgressKey(year, month, habit.id);
+        return statsMap.get(key) ?? 0;
+      });
+
+      return { name: habit.name, data: data }
     });
-    this.monthlyHabits = [];
-    this.habits$ = this.store.select(selectHabitsWithProgress);
-    this.habitProgressMonthly$ = this.store.select(selectHabitProgressByMonth);
+  });
+
+  public readonly chartOptions : Partial<ChartOptions> = {
+    chart: {
+      type: 'line',
+      height: 350,
+      background: 'transparent',
+      toolbar: { show: true, tools: { zoom: true, pan: true, reset: true }}
+    },
+    theme: { mode: 'dark', palette: 'palette1' },
+    stroke: { curve: 'smooth', width: 3 },
+    dataLabels: { enabled: true },
+    xaxis: { categories: this.monthNames },
+    yaxis: { min: 0 }
+  };
+
+  constructor() {
+    addIcons({ caretBackCircleOutline, caretForwardCircleOutline });
+
+    effect(() => {
+      const habits = this.habitState.habits();
+      const year = this.currentYear();
+
+      if (habits.length > 0) {
+        untracked(() => {
+
+          if (!this.isYearLoad(year)) {
+            const habitIds = this.getHabitsIds();
+            this.habitState.loadHabitProgressMonthly([year - 1, year], habitIds);
+          }
+        });
+      }
+    });
   }
 
   ngOnInit(): void {
-
-    combineLatest([this.habitProgressMonthly$, this.habits$])
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(([habitProgress, habits]) =>{
-        if(!habitProgress || !habits) return;
-
-        this.habitProgressMonthly = { ...habitProgress};
-        this.habits = habits;
-        this.onHabistChange();
-      });
-
-    const currentYear = this.currentDay.getFullYear();
-  
-    const years = [
-      currentYear - 1,
-      currentYear
-    ];
-    
-    if(!this.habitProgressMonthly?.[currentYear]){
-      this.store.dispatch(loadHabitProgressByMonth({years: years, habitIds: this.getHabitsIds() }));
-    }
+    this.setupChartResizeObserver();
   }
 
-  ngAfterViewInit() : void {
-    // setTimeout( () => {
-    //   this.generateChart();
-    // });
+  changeYear(offset : number) {
+    this.currentYear.update(y => y + offset);
   }
 
-  onHabistChange(){
-    this.getMonthlyHabits();
-    this.generateChart();
+  private getHabitsIds() : number[] {
+    return untracked(() => this.habitState.habits().map(h => h.id));
   }
 
-  getMonthlyHabits() : void {
-    this.monthlyHabits = [];
-
-    if(!this.habits || this.habits.length === 0)
-      return;
-    
-    this.habits.forEach(habit => {
-      let count : number[] = [];
-      
-      this.monhtNames.forEach( (month, index) => {
-        count.push(
-          this.getDateCountForMonth(habit.id, this.currentDay.getFullYear(), index + 1)
-        )
-      });
-      
-      this.monthlyHabits.push({
-        name: habit.name,
-        count: count
-      });
-    
-    });
+  private isYearLoad(year : number) {
+    return untracked(() => this.habitState.habitProgressMonthly().some(r => r.year === year));
   }
 
-  getDateCountForMonth(habitId : number, year : number, month : number) : number {
-    if(!this.habitProgressMonthly?.[year]?.[month])
-      return 0;
-    return this.habitProgressMonthly[year][month][habitId] || 0;
-  }
-
-  prevYear(){
-    this.currentDay.setFullYear(this.currentDay.getFullYear() - 1);
-    this.findPrevYear(this.currentDay);
-    this.getMonthlyHabits();
-    this.generateChart();
-  }
-
-  findPrevYear(day : Date){
-    const lastYear = day.getFullYear() - 1;
-    const years = [lastYear];
-    this.store.dispatch(loadHabitProgressByMonth({years, habitIds: this.getHabitsIds() }));
-  }
-
-  nextYear(){
-    this.currentDay.setFullYear(this.currentDay.getFullYear() + 1);
-    this.findNextYear(this.currentDay);
-    this.getMonthlyHabits();
-    this.generateChart();
-  }
-
-  findNextYear(day : Date){
-    const lastYear = day.getFullYear() + 1;
-    const years = [lastYear];
-    this.store.dispatch(loadHabitProgressByMonth({years, habitIds: this.getHabitsIds() }));
-  }
-
-  getHabitsIds() : number[] {
-    let habitIds : number[] = [];
-    this.habits.forEach(habit => habitIds.push(habit.id));
-    return habitIds;
-  }
-
-  generateChart() : void {
-
-    if(!this.chartCanvas || !this.chartCanvas.nativeElement) return;
-
-    const ctx = this.chartCanvas.nativeElement.getContext("2d");
-
-    if(!ctx){
-      return;
-    }
-
-    if(this.chart){
-      this.chart.destroy();
-    }
-
-    const data = {
-      labels : monthNames,
-      datasets : 
-        this.monthlyHabits.map(habit => {
-          const randomColor = `rgb(
-            ${Math.floor(Math.random() * 256)}, 
-            ${Math.floor(Math.random() * 256)}, 
-            ${Math.floor(Math.random() * 256)}
-          )`;
-
-          return {
-            label: habit.name,
-            data: habit.count,
-            fill: false,
-            borderColor : randomColor,
-            backgroundColor: randomColor,
-            tension: 0.1,
-          }
+  private setupChartResizeObserver() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setTimeout(() => window.dispatchEvent(new Event(APP.RESIZE)), APP.TIME_RESIZE);
         }
-      )
-    };
-
-    const options = {
-      devicePixelRatio: window.devicePixelRatio || 1,
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          ticks: { color: '#fff' },
-          grid: { color: '#2c2c37' },
-          font: {
-            size: 16,
-            family: "Arial, sans-serif"
-          }
-        },
-        y: {
-          ticks: { color: '#fff' },
-          grid: { color: '#2c2c37' },
-          beginAtZero: true,
-          min: 0,
-          // max: 31
-          font: {
-            size: 16,
-            family: "Arial, sans-serif"
-          }
-        }
-      },
-      plugins: {
-        legend: {
-          labels: {
-            color: '#fff',
-            font: {
-              size: 16,
-              family: "Arial, sans-serif"
-            },
-          }
-        }
-      },
-      layout: {
-        padding: 30
-      }
-    };
-
-    this.chart = new Chart(ctx, {
-      type: 'line' as ChartType,
-      data: data,
-      options: options,
+      });
     });
 
+    observer.observe(this.elementRef.nativeElement);
+    this.destroyRef.onDestroy(() => observer.disconnect());
   }
-
 }
