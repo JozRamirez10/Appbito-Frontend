@@ -166,6 +166,7 @@ export const GENERAL = {
     HYPEN: '-',
     COLON: ':',
     PX: 'px',
+    DASH: '/',
     SEPARATE_DATETIME: 'T'
 } as const;
 
@@ -177,6 +178,8 @@ export const APP = {
     VIEW: 'view',
     OK: 'OK',
     CANCEL: 'Cancel',
+    RESIZE: 'resize',
+    TIME_RESIZE: 200,
     TIME_REFRESH_MS: 500,
     SIZE_KB: 1024,
     MAX_IMAGE_SIZE_MB: 2,
