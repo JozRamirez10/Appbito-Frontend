@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { Component, inject, Input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IonButton, IonCol, IonContent, IonHeader, IonIcon, IonInput, IonRow, IonTextarea, ModalController } from "@ionic/angular/standalone";
@@ -89,7 +90,7 @@ export class DetailHabitProgressComponent implements OnInit {
         this.modalController.dismiss(null, MODAL_CONTROLLER.SUCCESS);
         this.modalService.showModal(ModalActions.EDIT);
       },
-      error: () => {}
+      error: (err) => this.validateErrorToCloseModal(err)
     });
   }
 
@@ -106,11 +107,17 @@ export class DetailHabitProgressComponent implements OnInit {
         this.modalController.dismiss(null, MODAL_CONTROLLER.SUCCESS);
         this.modalService.showModal(ModalActions.DELETE);
       },
-      error: () => {}
+      error: (err) => this.validateErrorToCloseModal(err)
     });
   }
 
   closeHabitProgressCanvas() {
     this.modalController.dismiss(null, MODAL_CONTROLLER.CANCEL);
+  }
+
+  private validateErrorToCloseModal(err : HttpErrorResponse) {
+    if (err?.status == HttpStatusCode.Unauthorized || err?.status == HttpStatusCode.Forbidden) {
+      this.closeHabitProgressCanvas()
+    }
   }
 }
