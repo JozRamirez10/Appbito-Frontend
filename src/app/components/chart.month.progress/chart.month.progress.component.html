@@ -20,7 +20,7 @@
         <ion-spinner name="crescent" color="primary"></ion-spinner>
       </div>
     } @else {
-      @if (chartSeries().length > 0) {
+      @if (chartSeries().length > 0 && habitState.habitProgressMonthly().length > 0) {
         <apx-chart
           [series]="chartSeries()"
           [chart]="chartOptions.chart!"
